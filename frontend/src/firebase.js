@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAnalytics } from 'firebase/analytics'
+import { getAnalytics, isSupported } from 'firebase/analytics'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getDatabase } from 'firebase/database'
@@ -20,11 +20,20 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
 
-// Initialize services
-export const analytics = getAnalytics(app)
+// Initialize services safely
 export const auth = getAuth(app)
 export const db = getFirestore(app)          // Firestore (documents/collections)
 export const rtdb = getDatabase(app)         // Realtime Database
 export const storage = getStorage(app)       // File storage
+
+let analyticsInstance = null
+isSupported().then((supported) => {
+  if (supported) {
+    analyticsInstance = getAnalytics(app)
+  }
+}).catch((err) => {
+  console.warn("Firebase Analytics not supported in this browser environment:", err)
+})
+export const analytics = analyticsInstance
 
 export default app
