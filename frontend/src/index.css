@@ -1,34 +1,35 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
-   MediVerse AI — Premium Indian Tricolor Theme
-   Saffron (Kesari), Cream (Shwet), and Emerald (Sabz)
+   MediVerse AI — Premium Indian Healthcare Theme
+   A professional, clean, and futuristic startup-level design system
+   Inspired by Apollo Hospitals, Practo, and Tata Health
    ═══════════════════════════════════════════════════════════ */
 
 @theme {
-  --color-cyber-black: #FAF9F5; /* Royal Ivory Warm Canvas */
-  --color-cyber-dark: #FFFFFF;  /* Pure Shwet Card Canvas */
-  --color-cyber-card: #FCFAF6;  /* Soft Warm Cream */
-  --color-cyber-surface: #FDFCF8;
-  --color-cyber-border: #EFE8DF; /* Delicate marigold-tinted borders */
-  --color-cyber-hover: #FFF4E5;  /* Soft Saffron Highlight */
+  --color-cyber-black: #F8FAFC; /* Slate-50 Ultra-Clean Background */
+  --color-cyber-dark: #FFFFFF;  /* Pure White Sidebar / Header Canvas */
+  --color-cyber-card: #FFFFFF;  /* Pure White Card Base */
+  --color-cyber-surface: #FFFFFF;
+  --color-cyber-border: #E2E8F0; /* Slate-200 Light Borders */
+  --color-cyber-hover: #F1F5F9;  /* Slate-100 Soft Hover State */
   
-  --color-neon-blue: #FF9933;   /* Indian Saffron (Kesari) */
-  --color-neon-purple: #138808; /* Indian Emerald Green (Sabz) */
-  --color-neon-pink: #000080;   /* Ashoka Chakra Navy Blue */
-  --color-neon-green: #138808;  /* Emerald Green */
-  --color-neon-orange: #FF9933; /* Saffron Orange */
-  --color-neon-red: #D32F2F;    /* Deep Crimson */
+  --color-neon-blue: #0F4C81;   /* Medical Blue (Primary) */
+  --color-neon-purple: #14B8A6; /* Teal (Secondary) */
+  --color-neon-pink: #FF9933;   /* Indian Saffron (Accent) */
+  --color-neon-green: #22C55E;  /* Success Green */
+  --color-neon-orange: #F59E0B; /* Warning Orange */
+  --color-neon-red: #EF4444;    /* Danger Red */
   
-  --color-text-primary: #0F172A;  /* Deep Slate/Navy Charcoal */
-  --color-text-secondary: #334155;/* Slate Grey */
-  --color-text-muted: #64748B;    /* Soft Muted Slate */
+  --color-text-primary: #1E293B;  /* Deep Slate (Slate-800) */
+  --color-text-secondary: #475569;/* Medium Charcoal (Slate-600) */
+  --color-text-muted: #94A3B8;    /* Muted Slate (Slate-400) */
 
-  --font-heading: 'Orbitron', 'Inter', system-ui, sans-serif;
+  --font-heading: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 }
 
-/* ── Base ──────────────────────────────────────────────────── */
+/* ── Base Reset ────────────────────────────────────────────── */
 
 * {
   margin: 0;
@@ -58,75 +59,73 @@ body {
   flex-direction: column;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────────── */
+/* ── Scrollbars ────────────────────────────────────────────── */
 
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--color-neon-blue), var(--color-neon-purple));
+  background: #CBD5E1; /* Light Slate-300 Scrollbar */
   border-radius: 10px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
 
-/* ── Tricolor Glass Panels ──────────────────────────────────── */
+/* ── Premium Glassmorphism & Cards ──────────────────────────── */
 
 .glass-panel {
-  background: rgba(255, 253, 249, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 153, 51, 0.12);
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(15, 76, 129, 0.08);
+  border-radius: 24px; /* 24px Radius as Specified */
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .glass-panel:hover {
-  border-color: rgba(19, 136, 8, 0.25);
-  box-shadow: 0 10px 30px rgba(255, 153, 51, 0.06), 0 1px 3px rgba(19, 136, 8, 0.03);
+  border-color: rgba(20, 184, 166, 0.25);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07), 0 2px 4px rgba(15, 23, 42, 0.02);
 }
 
 .glass-panel-strong {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 153, 51, 0.16);
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.04);
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 76, 129, 0.12);
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.05);
 }
 
-/* ── Ashoka & Tricolor Typography ──────────────────────────── */
+/* ── Typography & Gradients ────────────────────────────────── */
 
 .neon-text-blue {
   color: var(--color-neon-blue);
-  text-shadow: 0 1px 2px rgba(255, 153, 51, 0.15);
 }
 
 .neon-text-purple {
   color: var(--color-neon-purple);
-  text-shadow: 0 1px 2px rgba(19, 136, 8, 0.15);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-neon-blue) 0%, #E65100 50%, var(--color-neon-purple) 100%);
+  background: linear-gradient(135deg, var(--color-neon-blue) 0%, var(--color-neon-purple) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  font-weight: 800;
+  font-weight: 750;
 }
 
 .neon-border {
-  border: 1px solid rgba(255, 153, 51, 0.2);
-  box-shadow: 0 2px 12px rgba(255, 153, 51, 0.04);
+  border: 1px solid var(--color-cyber-border);
 }
 
 .neon-glow-blue {
-  box-shadow: 0 4px 20px rgba(255, 153, 51, 0.08);
+  box-shadow: 0 4px 20px rgba(15, 76, 129, 0.04);
 }
 
 .neon-glow-purple {
-  box-shadow: 0 4px 20px rgba(19, 136, 8, 0.08);
+  box-shadow: 0 4px 20px rgba(20, 184, 166, 0.04);
 }
 
-/* ── Buttons ───────────────────────────────────────────────── */
+/* ── Button Architectures ──────────────────────────────────── */
 
 .btn-neon {
   position: relative;
@@ -134,22 +133,18 @@ body {
   font-family: var(--font-body);
   font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
   color: var(--color-neon-blue);
-  background: rgba(255, 153, 51, 0.06);
-  border: 1px solid rgba(255, 153, 51, 0.3);
-  border-radius: 12px;
+  background: rgba(15, 76, 129, 0.06);
+  border: 1px solid rgba(15, 76, 129, 0.2);
+  border-radius: 16px; /* Rounded XL */
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-neon:hover {
-  color: #fff;
-  background: var(--color-neon-blue);
+  background: rgba(15, 76, 129, 0.12);
   border-color: var(--color-neon-blue);
-  box-shadow: 0 6px 20px rgba(255, 153, 51, 0.25);
-  transform: translateY(-1px);
+  transform: scale(1.03); /* Subtle Scale 1.03 */
 }
 
 .btn-neon-filled {
@@ -158,62 +153,46 @@ body {
   font-family: var(--font-body);
   font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   color: #fff;
-  background: linear-gradient(135deg, var(--color-neon-blue), var(--color-neon-purple));
+  background: var(--color-neon-blue);
   border: none;
-  border-radius: 14px;
+  border-radius: 16px; /* Rounded XL */
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(255, 153, 51, 0.25), 0 4px 20px rgba(19, 136, 8, 0.15);
+  box-shadow: 0 4px 14px rgba(15, 76, 129, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-neon-filled:hover {
-  box-shadow: 0 8px 24px rgba(255, 153, 51, 0.35), 0 8px 24px rgba(19, 136, 8, 0.25);
-  transform: translateY(-2px);
+  background: #0B3A63; /* Slightly Darker Blue */
+  box-shadow: 0 6px 20px rgba(15, 76, 129, 0.3);
+  transform: scale(1.03); /* Subtle Scale 1.03 */
 }
 
-/* ── Tricolor marigold Background Mesh Grid ─────────────────── */
+/* ── Subtle Healthcare Grid Mesh ───────────────────────────── */
 
 .cyber-grid {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.65;
+  opacity: 0.35;
   background-image:
-    radial-gradient(ellipse at 15% 20%, rgba(255, 153, 51, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at 85% 80%, rgba(19, 136, 8, 0.04) 0%, transparent 60%),
-    linear-gradient(rgba(255, 153, 51, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 153, 51, 0.025) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
+    radial-gradient(ellipse at 15% 15%, rgba(15, 76, 129, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 85%, rgba(20, 184, 166, 0.03) 0%, transparent 60%),
+    linear-gradient(rgba(15, 76, 129, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 76, 129, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 80px 80px, 80px 80px;
 }
 
-/* ── Custom Animations ──────────────────────────────────────── */
-
-@keyframes pulse-neon {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-/* ── Clean Scrollbars and Elements ─────────────────────────── */
-
+/* Input Overwrites */
 input, select, textarea {
   color: var(--color-text-primary) !important;
-  background-color: rgba(255, 255, 255, 0.8) !important;
-  border-color: rgba(255, 153, 51, 0.2) !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid var(--color-cyber-border) !important;
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: rgba(19, 136, 8, 0.5) !important;
-  box-shadow: 0 0 10px rgba(19, 136, 8, 0.08) !important;
+  border-color: var(--color-neon-blue) !important;
+  box-shadow: 0 0 0 2px rgba(15, 76, 129, 0.15) !important;
+  outline: none !important;
 }

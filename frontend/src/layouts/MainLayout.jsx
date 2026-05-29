@@ -17,11 +17,13 @@ export default function MainLayout() {
       {/* Main content */}
       <div
         className="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-        style={{ marginLeft: sidebarOpen ? '250px' : '68px' }}
+        style={{ marginLeft: sidebarOpen ? '280px' : '76px' }}
       >
         <Navbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 p-5 relative z-10 overflow-x-hidden">
-          <Outlet />
+        <main className="flex-1 p-6 relative z-10 overflow-x-hidden">
+          <div className="max-w-[1400px] mx-auto w-full">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

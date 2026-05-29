@@ -1,160 +1,200 @@
 import { motion } from 'framer-motion'
-import { Activity, HeartPulse, TrendingUp, Pill, AlertTriangle, Sparkles, Droplets, Moon, Flame, Footprints } from 'lucide-react'
+import {
+  HeartPulse,
+  FileText,
+  Activity,
+  ShieldAlert,
+  Clock,
+  TrendingUp,
+  MapPin,
+  Calendar,
+  CheckCircle2,
+  AlertTriangle
+} from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import GlowCard from '../components/GlowCard'
-import StatCard from '../components/StatCard'
 
-const weeklyData = [65, 72, 58, 80, 75, 88, 82]
-const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const healthCards = [
+  { label: 'Health Score', value: '85 / 100', desc: 'Excellent physical marks', color: '#0F4C81', icon: HeartPulse },
+  { label: 'Reports Scan', value: '12 Analyzed', desc: 'Blood panels, OCR reports', color: '#14B8A6', icon: FileText },
+  { label: 'Disease Predictions', value: '8 Mapped', desc: 'Cardiac, diabetic indices', color: '#FF9933', icon: Activity },
+  { label: 'Emergency Status', value: 'System Active', desc: 'Ambulance tracking live', color: '#22C55E', icon: ShieldAlert },
+]
+
+const recentActivity = [
+  { time: '10 mins ago', text: 'Scanned Vitamin D3 supplement expiration', color: '#FF9933' },
+  { time: '2 hours ago', text: 'Logged symptoms: mild dry cough', color: '#0F4C81' },
+  { time: 'Yesterday', text: 'OCR simplified Apollo Labs Blood Report', color: '#14B8A6' },
+  { time: '3 days ago', text: 'Updated secondary emergency numbers', color: '#22C55E' },
+]
 
 const medicines = [
-  { name: 'Vitamin D3', time: '8:00 AM', taken: true },
-  { name: 'Omega-3', time: '1:00 PM', taken: true },
-  { name: 'Melatonin', time: '10:00 PM', taken: false },
+  { name: 'Vitamin D3 (Calcirol)', time: '8:00 AM', taken: true },
+  { name: 'Omega-3 (Fish Oil)', time: '1:00 PM', taken: true },
+  { name: 'Pantocid (Antacid)', time: '9:00 PM', taken: false },
 ]
 
-const alerts = [
-  { text: 'Blood sugar slightly elevated — monitor closely', severity: 'warning', color: '#FF6B35' },
-  { text: 'Next checkup due in 3 days', severity: 'info', color: '#00F0FF' },
+const appointments = [
+  { doctor: 'Dr. Ramesh Kumar', specialty: 'Cardiologist (Apollo)', time: 'Tomorrow, 10:30 AM' },
+  { doctor: 'Dr. Priya Sharma', specialty: 'Mental Wellness AI Support', time: 'Monday, 4:00 PM' },
 ]
 
-const recommendations = [
-  { icon: Droplets, text: 'Increase water intake to 3L/day', color: '#00F0FF' },
-  { icon: Moon, text: 'Aim for 7-8 hours of sleep tonight', color: '#A855F7' },
-  { icon: Flame, text: 'Add 20 min cardio to your routine', color: '#FF3366' },
-  { icon: Footprints, text: 'You need 2,400 more steps today', color: '#00FF88' },
+const nearbyHospitals = [
+  { name: 'Apollo Critical Care Hospital', distance: '1.2 km', rating: '4.8 ⭐' },
+  { name: 'Max Super Speciality Clinic', distance: '2.5 km', rating: '4.6 ⭐' },
 ]
 
-const history = [
-  { date: 'May 25', event: 'Annual Health Checkup', status: 'Completed', color: '#00FF88' },
-  { date: 'May 18', event: 'Blood Test — CBC Panel', status: 'Normal', color: '#00F0FF' },
-  { date: 'May 10', event: 'Dental Cleaning', status: 'Completed', color: '#A855F7' },
-  { date: 'Apr 28', event: 'Eye Examination', status: 'Follow-up', color: '#FF6B35' },
-]
+const chartData = [75, 78, 82, 80, 85, 88, 85]
+const chartDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export default function HealthDashboard() {
-  const maxVal = Math.max(...weeklyData)
+  const maxScore = Math.max(...chartData)
 
   return (
-    <div>
-      <PageHeader icon={Activity} title="Health Dashboard" subtitle="Your comprehensive health analytics and insights." />
+    <div className="space-y-6">
+      <PageHeader
+        icon={HeartPulse}
+        title="Health Dashboard"
+        subtitle="Manage your physiological indicators, OCR report summaries, and emergency status in real-time."
+      />
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={HeartPulse} label="Heart Rate" value="72 bpm" change="-2%" accentColor="#FF3366" delay={0} />
-        <StatCard icon={Droplets} label="Blood Oxygen" value="98%" change="+1%" accentColor="#00F0FF" delay={0.1} />
-        <StatCard icon={Flame} label="Calories Burned" value="1,847" change="+12%" accentColor="#FF6B35" delay={0.2} />
-        <StatCard icon={Footprints} label="Steps Today" value="7,623" change="+8%" accentColor="#00FF88" delay={0.3} />
+      {/* ─── TOP ROW: 4 FIXED HEALTH CARDS ─────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {healthCards.map((c, i) => {
+          const Icon = c.icon
+          return (
+            <GlowCard hover={false} key={i} className="bg-white border border-cyber-border p-6 rounded-3xl flex flex-col justify-between h-36">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-text-secondary uppercase tracking-wider">{c.label}</span>
+                <div className="p-2.5 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${c.color}08`, border: `1px solid ${c.color}15` }}>
+                  <Icon size={18} style={{ color: c.color }} />
+                </div>
+              </div>
+              <div>
+                <p className="text-2xl font-black font-heading text-text-primary mt-2">{c.value}</p>
+                <p className="text-[10px] text-text-muted mt-1 leading-none">{c.desc}</p>
+              </div>
+            </GlowCard>
+          )
+        })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Weekly health score chart */}
-        <div className="lg:col-span-2">
-          <GlowCard hover={false}>
+      {/* ─── SECOND ROW: HEALTH ANALYTICS CHART & RECENT ACTIVITY ──── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Health Analytics Chart */}
+        <div className="lg:col-span-8">
+          <GlowCard hover={false} className="bg-white border border-cyber-border p-6 h-96 flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading text-sm font-semibold text-text-primary flex items-center gap-2">
-                <TrendingUp size={16} className="text-neon-blue" /> Weekly Health Score
-              </h3>
-              <span className="text-xs text-text-muted">This Week</span>
+              <div className="flex items-center gap-2">
+                <TrendingUp size={18} className="text-neon-blue" />
+                <h3 className="font-heading text-sm font-bold text-text-primary uppercase tracking-wide">Physiological Health Index</h3>
+              </div>
+              <span className="text-[10px] bg-neon-blue/5 text-neon-blue border border-neon-blue/15 px-3 py-1 rounded-full font-bold">This Week</span>
             </div>
-            <div className="flex items-end justify-between gap-3 h-40">
-              {weeklyData.map((val, i) => (
-                <div key={i} className="flex flex-col items-center gap-2 flex-1">
-                  <span className="text-xs text-text-muted">{val}</span>
-                  <motion.div initial={{ height: 0 }} animate={{ height: `${(val / maxVal) * 100}%` }}
-                    transition={{ delay: i * 0.08, duration: 0.6, ease: 'easeOut' }}
-                    className="w-full rounded-t-lg bg-gradient-to-t from-neon-blue/60 to-neon-purple/60 relative min-h-[8px]"
-                    style={{ boxShadow: '0 0 8px rgba(0,240,255,0.15)' }}>
-                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-neon-blue rounded-full" />
-                  </motion.div>
-                  <span className="text-xs text-text-secondary">{days[i]}</span>
+            
+            {/* Smooth bar graph with accurate height calculations */}
+            <div className="flex-1 flex items-end justify-between gap-4 h-48 px-2">
+              {chartData.map((val, i) => (
+                <div key={i} className="flex flex-col items-center gap-2.5 flex-1">
+                  <span className="text-[10px] text-text-secondary font-bold">{val}%</span>
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${(val / maxScore) * 120}px` }}
+                    transition={{ delay: i * 0.06, duration: 0.5 }}
+                    className="w-full rounded-t-xl bg-gradient-to-t from-neon-blue to-neon-purple relative min-h-[6px]"
+                  />
+                  <span className="text-[11px] text-text-muted font-medium">{chartDays[i]}</span>
                 </div>
               ))}
             </div>
           </GlowCard>
         </div>
 
-        {/* Medicine reminders */}
-        <GlowCard hover={false}>
-          <h3 className="font-heading text-sm font-semibold mb-3 text-text-primary flex items-center gap-2">
-            <Pill size={16} className="text-neon-purple" /> Medicine Reminders
-          </h3>
+        {/* Recent Activity List */}
+        <div className="lg:col-span-4">
+          <GlowCard hover={false} className="bg-white border border-cyber-border p-6 h-96 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <Clock size={18} className="text-neon-purple" />
+                <h3 className="font-heading text-sm font-bold text-text-primary uppercase tracking-wide">Recent Activity</h3>
+              </div>
+
+              <div className="space-y-4">
+                {recentActivity.map((a, i) => (
+                  <div key={i} className="flex gap-3 text-left">
+                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: a.color }} />
+                    <div>
+                      <p className="text-xs text-text-primary font-medium leading-relaxed">{a.text}</p>
+                      <span className="text-[9px] text-text-muted mt-0.5 block">{a.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </GlowCard>
+        </div>
+      </div>
+
+      {/* ─── THIRD ROW: MEDICINE, APPOINTMENTS, HOSPITALS ──── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Medicine Reminders Widget */}
+        <GlowCard hover={false} className="bg-white border border-cyber-border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <HeartPulse size={18} className="text-neon-pink" />
+            <h3 className="font-heading text-sm font-bold text-text-primary uppercase tracking-wide">Medicine Reminders</h3>
+          </div>
           <div className="space-y-3">
             {medicines.map((m, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                className="flex items-center justify-between p-3 rounded-xl bg-cyber-dark border border-cyber-border">
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-cyber-black border border-cyber-border">
                 <div>
-                  <p className="text-sm text-text-primary">{m.name}</p>
-                  <p className="text-xs text-text-muted">{m.time}</p>
+                  <p className="text-xs font-bold text-text-primary">{m.name}</p>
+                  <p className="text-[10px] text-text-muted">{m.time}</p>
                 </div>
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs ${m.taken ? 'bg-neon-green/10 text-neon-green border border-neon-green/20' : 'bg-cyber-dark border border-cyber-border text-text-muted'}`}>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${m.taken ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-white border border-cyber-border text-text-muted'}`}>
                   {m.taken ? '✓' : '○'}
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </GlowCard>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* AI Recommendations */}
-        <div className="lg:col-span-1">
-          <GlowCard hover={false}>
-            <h3 className="font-heading text-sm font-semibold mb-3 text-text-primary flex items-center gap-2">
-              <Sparkles size={16} className="text-neon-blue" /> AI Recommendations
-            </h3>
-            <div className="space-y-2.5">
-              {recommendations.map((r, i) => {
-                const Icon = r.icon
-                return (
-                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.1 }}
-                    className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-white/[0.02] transition-colors">
-                    <Icon size={16} className="flex-shrink-0 mt-0.5" style={{ color: r.color }} />
-                    <p className="text-xs text-text-secondary leading-relaxed">{r.text}</p>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </GlowCard>
-        </div>
+        {/* Upcoming Appointments Widget */}
+        <GlowCard hover={false} className="bg-white border border-cyber-border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar size={18} className="text-neon-blue" />
+            <h3 className="font-heading text-sm font-bold text-text-primary uppercase tracking-wide">Appointments</h3>
+          </div>
+          <div className="space-y-3">
+            {appointments.map((ap, i) => (
+              <div key={i} className="p-3 rounded-xl bg-cyber-black border border-cyber-border text-left">
+                <p className="text-xs font-bold text-text-primary">{ap.doctor}</p>
+                <p className="text-[10px] text-neon-blue mt-0.5">{ap.specialty}</p>
+                <p className="text-[9px] text-text-muted mt-1 flex items-center gap-1.5">
+                  <Clock size={10} /> {ap.time}
+                </p>
+              </div>
+            ))}
+          </div>
+        </GlowCard>
 
-        {/* Alerts */}
-        <div className="lg:col-span-1">
-          <GlowCard hover={false}>
-            <h3 className="font-heading text-sm font-semibold mb-3 text-text-primary flex items-center gap-2">
-              <AlertTriangle size={16} className="text-neon-orange" /> Alerts
-            </h3>
-            <div className="space-y-2.5">
-              {alerts.map((a, i) => (
-                <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 + i * 0.1 }}
-                  className="p-3 rounded-xl border" style={{ borderColor: `${a.color}30`, backgroundColor: `${a.color}08` }}>
-                  <p className="text-xs" style={{ color: a.color }}>{a.text}</p>
-                </motion.div>
-              ))}
-            </div>
-          </GlowCard>
-        </div>
-
-        {/* Disease History Timeline */}
-        <div className="lg:col-span-1">
-          <GlowCard hover={false}>
-            <h3 className="font-heading text-sm font-semibold mb-3 text-text-primary">Health History</h3>
-            <div className="space-y-3 relative">
-              <div className="absolute left-[7px] top-2 bottom-2 w-[1px] bg-cyber-border" />
-              {history.map((h, i) => (
-                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.1 }}
-                  className="flex items-start gap-3 pl-1 relative">
-                  <div className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 mt-0.5 z-10 bg-cyber-black" style={{ borderColor: h.color }} />
-                  <div>
-                    <p className="text-xs text-text-muted">{h.date}</p>
-                    <p className="text-sm text-text-primary">{h.event}</p>
-                    <span className="text-xs" style={{ color: h.color }}>{h.status}</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </GlowCard>
-        </div>
+        {/* Nearby Hospitals Widget */}
+        <GlowCard hover={false} className="bg-white border border-cyber-border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin size={18} className="text-neon-purple" />
+            <h3 className="font-heading text-sm font-bold text-text-primary uppercase tracking-wide">Nearby Hospitals</h3>
+          </div>
+          <div className="space-y-3">
+            {nearbyHospitals.map((h, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-cyber-black border border-cyber-border text-left">
+                <div>
+                  <p className="text-xs font-bold text-text-primary">{h.name}</p>
+                  <p className="text-[10px] text-text-muted mt-0.5">{h.distance} away</p>
+                </div>
+                <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-bold">{h.rating}</span>
+              </div>
+            ))}
+          </div>
+        </GlowCard>
       </div>
     </div>
   )
