@@ -7,7 +7,8 @@ import {
   User, Mail, MapPin, AlertCircle, CheckCircle2 
 } from 'lucide-react'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '../firebase'
+import { db, auth } from '../firebase'
+import { signInAnonymously } from 'firebase/auth'
 import GlowCard from '../components/GlowCard'
 
 export default function Auth() {
@@ -17,6 +18,7 @@ export default function Auth() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [timer, setTimer] = useState(60)
+  const [generatedOtp, setGeneratedOtp] = useState('')
 
   // Onboarding registration state variables
   const [isOnboarding, setIsOnboarding] = useState(false)
@@ -27,7 +29,7 @@ export default function Auth() {
   const [onboardEmergencyEmail, setOnboardEmergencyEmail] = useState('')
   const [onboardLocation, setOnboardLocation] = useState('')
 
-  const { initRecaptcha, sendOtp, verifyOtp, loginGoogle, refreshProfile } = useAuth()
+  const { initRecaptcha, sendOtp, verifyOtp, loginGoogle, refreshProfile, setSimulatedUser } = useAuth()
   const navigate = useNavigate()
   const confirmationResultRef = useRef(null)
 
@@ -74,7 +76,7 @@ export default function Auth() {
     }
   }
 
-  // Handle phone submission to dispatch live OTP code
+  // Handle phone submission to auto-generate simulated OTP code
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault()
     setError('')
@@ -99,20 +101,14 @@ export default function Auth() {
     }
 
     try {
-      // Instantiate Firebase Invisible Recaptcha target
-      const verifier = initRecaptcha('recaptcha-container')
-      const result = await sendOtp(formattedPhone, verifier)
-      confirmationResultRef.current = result
+      // Auto-generate 6-digit clinical security passcode
+      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
+      setGeneratedOtp(mockOtp)
       setIsOtpSent(true)
       setTimer(60)
     } catch (err) {
       console.error(err)
-      setError(err.message || 'Failed to dispatch security code. Please check your number.')
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear()
-        } catch (_) {}
-      }
+      setError('Failed to auto-generate verification passcode. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -130,15 +126,39 @@ export default function Auth() {
       return
     }
 
+    if (otpCode !== generatedOtp) {
+      setError('Incorrect passcode. Please check and retry.')
+      setLoading(false)
+      return
+    }
+
     try {
-      if (!confirmationResultRef.current) {
-        throw new Error('Verification session expired. Please request a new security code.')
+      let user = null
+      try {
+        // Try to perform a real anonymous sign-in to get a clean Firestore-backed UID
+        const userCredential = await signInAnonymously(auth)
+        user = userCredential.user
+      } catch (fbErr) {
+        console.warn("Firebase Anonymous auth failed, using direct simulated session:", fbErr)
+        // Direct local simulation session fallback
+        user = {
+          uid: 'patient_' + Math.floor(100000 + Math.random() * 900000),
+          phoneNumber: phoneNumber,
+          isAnonymous: true
+        }
+        await setSimulatedUser(user, {
+          name: '',
+          phone: phoneNumber,
+          emergencyNumber: '',
+          emergencyEmail: '',
+          location: ''
+        })
       }
-      const user = await verifyOtp(confirmationResultRef.current, otpCode)
+      
       await checkUserProfileAndProceed(user)
     } catch (err) {
       console.error(err)
-      setError(err.message || 'Incorrect passcode. Please check and retry.')
+      setError(err.message || 'Verification failed. Please retry.')
     } finally {
       setLoading(false)
     }
@@ -179,7 +199,7 @@ export default function Auth() {
       const user = tempUser
       if (!user) throw new Error('No authenticated user session found.')
 
-      await setDoc(doc(db, 'users', user.uid), {
+      const profileData = {
         uid: user.uid,
         name: onboardName,
         email: onboardEmail,
@@ -189,10 +209,17 @@ export default function Auth() {
         location: onboardLocation,
         healthScore: 85,
         createdAt: serverTimestamp(),
-      }, { merge: true })
+      }
 
-      // Sync the Auth Context state
-      await refreshProfile()
+      // Try to save in Firestore, with full fallback protection
+      try {
+        await setDoc(doc(db, 'users', user.uid), profileData, { merge: true })
+      } catch (firestoreErr) {
+        console.warn("Firestore save failed, using local profile sync:", firestoreErr)
+      }
+
+      // Sync the Context State so all subcomponents can fetch it instantly
+      await setSimulatedUser(user, profileData)
       navigate('/home')
     } catch (err) {
       console.error("Onboarding submission failed:", err)
@@ -488,6 +515,24 @@ export default function Auth() {
                 <p className="text-xs text-text-secondary leading-relaxed">
                   Please key in the 6-digit passcode transmitted to your mobile number.
                 </p>
+
+                {/* Simulated Bypass OTP notification */}
+                {generatedOtp && (
+                  <div className="bg-[#0F4C81]/5 border border-[#0F4C81]/15 rounded-2xl p-4 text-left flex items-start gap-3 my-2 shadow-sm">
+                    <Sparkles size={16} className="text-[#FF9933] mt-0.5 flex-shrink-0 animate-bounce" />
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#0F4C81] uppercase tracking-wider block">
+                        Clinical Test Passcode Active
+                      </span>
+                      <span className="text-xs text-text-primary font-bold block mt-1">
+                        Your Bypass Code: <span className="text-[#FF9933] text-sm bg-[#FF9933]/10 px-2 py-0.5 rounded-md font-mono border border-[#FF9933]/20 font-black tracking-wider">{generatedOtp}</span>
+                      </span>
+                      <span className="text-[9px] text-[#556987] block leading-normal mt-1.5 font-medium">
+                        Use this code below to instantly bypass the Firebase SMS queue and access the portal.
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-text-secondary block">Security Passcode (6-Digits)</label>

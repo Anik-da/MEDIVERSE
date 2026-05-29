@@ -110,6 +110,11 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const setSimulatedUser = (user, profile) => {
+    setCurrentUser(user)
+    setUserProfile(profile)
+  }
+
   const value = {
     currentUser,
     userProfile,
@@ -121,6 +126,7 @@ export function AuthProvider({ children }) {
     register,
     loginGoogle,
     logout,
+    setSimulatedUser,
     refreshProfile: async () => {
       if (currentUser) {
         const p = await getUserProfile(currentUser.uid)
