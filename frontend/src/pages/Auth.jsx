@@ -149,7 +149,7 @@ export default function Auth() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center mb-3 shadow-[0_0_30px_rgba(0,240,255,0.25)] border border-white/10"
+            className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center mb-3 shadow-[0_0_30px_rgba(255,153,51,0.25)] border border-cyber-border"
           >
             <HeartPulse size={28} className="text-white" />
           </motion.div>

@@ -1,28 +1,30 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
-   MediVerse AI — Cyberpunk Healthcare Theme v2
-   Premium, hand-crafted design system
+   MediVerse AI — Premium Indian Tricolor Theme
+   Saffron (Kesari), Cream (Shwet), and Emerald (Sabz)
    ═══════════════════════════════════════════════════════════ */
 
 @theme {
-  --color-cyber-black: #06060F;
-  --color-cyber-dark: #0C0C1D;
-  --color-cyber-card: #101028;
-  --color-cyber-surface: #14142F;
-  --color-cyber-border: #1C1C45;
-  --color-cyber-hover: #1A1A3E;
-  --color-neon-blue: #00D4FF;
-  --color-neon-purple: #8B5CF6;
-  --color-neon-pink: #EC4899;
-  --color-neon-green: #10B981;
-  --color-neon-orange: #F59E0B;
-  --color-neon-red: #EF4444;
-  --color-text-primary: #E8E8F0;
-  --color-text-secondary: #9191B0;
-  --color-text-muted: #5A5A7A;
+  --color-cyber-black: #FAF9F5; /* Royal Ivory Warm Canvas */
+  --color-cyber-dark: #FFFFFF;  /* Pure Shwet Card Canvas */
+  --color-cyber-card: #FCFAF6;  /* Soft Warm Cream */
+  --color-cyber-surface: #FDFCF8;
+  --color-cyber-border: #EFE8DF; /* Delicate marigold-tinted borders */
+  --color-cyber-hover: #FFF4E5;  /* Soft Saffron Highlight */
+  
+  --color-neon-blue: #FF9933;   /* Indian Saffron (Kesari) */
+  --color-neon-purple: #138808; /* Indian Emerald Green (Sabz) */
+  --color-neon-pink: #000080;   /* Ashoka Chakra Navy Blue */
+  --color-neon-green: #138808;  /* Emerald Green */
+  --color-neon-orange: #FF9933; /* Saffron Orange */
+  --color-neon-red: #D32F2F;    /* Deep Crimson */
+  
+  --color-text-primary: #0F172A;  /* Deep Slate/Navy Charcoal */
+  --color-text-secondary: #334155;/* Slate Grey */
+  --color-text-muted: #64748B;    /* Soft Muted Slate */
 
-  --font-heading: 'Orbitron', monospace;
+  --font-heading: 'Orbitron', 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 }
 
@@ -58,66 +60,70 @@ body {
 
 /* ── Scrollbar ─────────────────────────────────────────────── */
 
-::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, var(--color-neon-blue), var(--color-neon-purple));
   border-radius: 10px;
 }
 
-/* ── Glass Panels ──────────────────────────────────────────── */
+/* ── Tricolor Glass Panels ──────────────────────────────────── */
 
 .glass-panel {
-  background: linear-gradient(135deg, rgba(16, 16, 40, 0.7), rgba(12, 12, 29, 0.5));
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 212, 255, 0.06);
+  background: rgba(255, 253, 249, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 153, 51, 0.12);
   border-radius: 20px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
 .glass-panel:hover {
-  border-color: rgba(0, 212, 255, 0.12);
+  border-color: rgba(19, 136, 8, 0.25);
+  box-shadow: 0 10px 30px rgba(255, 153, 51, 0.06), 0 1px 3px rgba(19, 136, 8, 0.03);
 }
 
 .glass-panel-strong {
-  background: linear-gradient(180deg, rgba(16, 16, 40, 0.9), rgba(10, 10, 24, 0.95));
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(0, 212, 255, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 153, 51, 0.16);
   border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.04);
 }
 
-/* ── Neon Utilities ────────────────────────────────────────── */
+/* ── Ashoka & Tricolor Typography ──────────────────────────── */
 
 .neon-text-blue {
   color: var(--color-neon-blue);
-  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5), 0 0 30px rgba(0, 212, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(255, 153, 51, 0.15);
 }
 
 .neon-text-purple {
   color: var(--color-neon-purple);
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5), 0 0 30px rgba(139, 92, 246, 0.2);
+  text-shadow: 0 1px 2px rgba(19, 136, 8, 0.15);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-neon-blue) 0%, var(--color-neon-purple) 50%, var(--color-neon-pink) 100%);
+  background: linear-gradient(135deg, var(--color-neon-blue) 0%, #E65100 50%, var(--color-neon-purple) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  font-weight: 800;
 }
 
 .neon-border {
-  border: 1px solid rgba(0, 212, 255, 0.15);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 153, 51, 0.2);
+  box-shadow: 0 2px 12px rgba(255, 153, 51, 0.04);
 }
 
 .neon-glow-blue {
-  box-shadow: 0 4px 30px rgba(0, 212, 255, 0.12), 0 0 60px rgba(0, 212, 255, 0.04);
+  box-shadow: 0 4px 20px rgba(255, 153, 51, 0.08);
 }
 
 .neon-glow-purple {
-  box-shadow: 0 4px 30px rgba(139, 92, 246, 0.12), 0 0 60px rgba(139, 92, 246, 0.04);
+  box-shadow: 0 4px 20px rgba(19, 136, 8, 0.08);
 }
 
 /* ── Buttons ───────────────────────────────────────────────── */
@@ -130,8 +136,8 @@ body {
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--color-neon-blue);
-  background: rgba(0, 212, 255, 0.06);
-  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(255, 153, 51, 0.06);
+  border: 1px solid rgba(255, 153, 51, 0.3);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -139,9 +145,10 @@ body {
 }
 
 .btn-neon:hover {
-  background: rgba(0, 212, 255, 0.12);
-  border-color: rgba(0, 212, 255, 0.4);
-  box-shadow: 0 4px 24px rgba(0, 212, 255, 0.15);
+  color: #fff;
+  background: var(--color-neon-blue);
+  border-color: var(--color-neon-blue);
+  box-shadow: 0 6px 20px rgba(255, 153, 51, 0.25);
   transform: translateY(-1px);
 }
 
@@ -158,146 +165,55 @@ body {
   border-radius: 14px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2), 0 0 40px rgba(139, 92, 246, 0.1);
+  box-shadow: 0 4px 20px rgba(255, 153, 51, 0.25), 0 4px 20px rgba(19, 136, 8, 0.15);
 }
 
 .btn-neon-filled:hover {
-  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3), 0 0 60px rgba(139, 92, 246, 0.15);
+  box-shadow: 0 8px 24px rgba(255, 153, 51, 0.35), 0 8px 24px rgba(19, 136, 8, 0.25);
   transform: translateY(-2px);
 }
 
-/* ── Background Grid ───────────────────────────────────────── */
+/* ── Tricolor marigold Background Mesh Grid ─────────────────── */
 
 .cyber-grid {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.65;
   background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
-    linear-gradient(rgba(0, 212, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.015) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 80px 80px, 80px 80px;
+    radial-gradient(ellipse at 15% 20%, rgba(255, 153, 51, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 80%, rgba(19, 136, 8, 0.04) 0%, transparent 60%),
+    linear-gradient(rgba(255, 153, 51, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 153, 51, 0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
 }
 
-/* ── Animations ────────────────────────────────────────────── */
+/* ── Custom Animations ──────────────────────────────────────── */
 
 @keyframes pulse-neon {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.6; }
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
+  50% { transform: translateY(-8px); }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.animate-float {
+  animation: float 4s ease-in-out infinite;
 }
 
-@keyframes scan-line {
-  0% { top: -5%; }
-  100% { top: 105%; }
-}
+/* ── Clean Scrollbars and Elements ─────────────────────────── */
 
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
-  50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.2), 0 0 60px rgba(139, 92, 246, 0.1); }
-}
-
-.animate-pulse-neon { animation: pulse-neon 2s ease-in-out infinite; }
-.animate-float { animation: float 6s ease-in-out infinite; }
-.animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
-
-.shimmer-bg {
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-/* ── Card Variants ─────────────────────────────────────────── */
-
-.card-elevated {
-  background: linear-gradient(145deg, rgba(20, 20, 47, 0.8), rgba(12, 12, 29, 0.6));
-  border: 1px solid rgba(0, 212, 255, 0.05);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.02);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-elevated:hover {
-  border-color: rgba(0, 212, 255, 0.1);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 212, 255, 0.05);
-  transform: translateY(-3px);
-}
-
-/* ── Accent dot indicator ──────────────────────────────────── */
-
-.accent-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-neon-blue);
-  box-shadow: 0 0 8px var(--color-neon-blue);
-}
-
-/* ── Input Styles ──────────────────────────────────────────── */
-
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"] {
-  font-family: var(--font-body);
-}
-
-/* ── Responsive Utilities ──────────────────────────────────── */
-
-@media (max-width: 768px) {
-  html { font-size: 14px; }
-  .glass-panel, .glass-panel-strong, .card-elevated {
-    border-radius: 16px;
-  }
-}
-
-/* ── Google Translate Stylings ─────────────────────────────── */
-
-.google-translate-dropdown {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-.google-translate-dropdown select.goog-te-combo {
-  background: rgba(20, 20, 47, 0.6) !important;
+input, select, textarea {
   color: var(--color-text-primary) !important;
-  border: 1px solid rgba(0, 212, 255, 0.2) !important;
-  border-radius: 8px !important;
-  padding: 4px 8px !important;
-  font-family: var(--font-body) !important;
-  font-size: 11px !important;
-  outline: none !important;
-  transition: all 0.3s ease !important;
-  cursor: pointer !important;
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(255, 153, 51, 0.2) !important;
 }
 
-.google-translate-dropdown select.goog-te-combo:hover {
-  border-color: rgba(0, 212, 255, 0.5) !important;
-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.1) !important;
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(19, 136, 8, 0.5) !important;
+  box-shadow: 0 0 10px rgba(19, 136, 8, 0.08) !important;
 }
-
-/* Hide standard Google Translate top banner */
-.goog-te-banner-frame.skiptranslate,
-.goog-te-banner,
-.goog-te-balloon-frame,
-#goog-gt-tt,
-.skiptranslate[style*="visibility: visible"] {
-  display: none !important;
-}
-
-body {
-  top: 0px !important;
-}
-
