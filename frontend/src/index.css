@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════
+   MediVerse AI — Cyberpunk Healthcare Theme v2
+   Premium, hand-crafted design system
+   ═══════════════════════════════════════════════════════════ */
+
+@theme {
+  --color-cyber-black: #06060F;
+  --color-cyber-dark: #0C0C1D;
+  --color-cyber-card: #101028;
+  --color-cyber-surface: #14142F;
+  --color-cyber-border: #1C1C45;
+  --color-cyber-hover: #1A1A3E;
+  --color-neon-blue: #00D4FF;
+  --color-neon-purple: #8B5CF6;
+  --color-neon-pink: #EC4899;
+  --color-neon-green: #10B981;
+  --color-neon-orange: #F59E0B;
+  --color-neon-red: #EF4444;
+  --color-text-primary: #E8E8F0;
+  --color-text-secondary: #9191B0;
+  --color-text-muted: #5A5A7A;
+
+  --font-heading: 'Orbitron', monospace;
+  --font-body: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 15px;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-cyber-black);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-neon-blue), var(--color-neon-purple));
+  border-radius: 10px;
+}
+
+/* ── Glass Panels ──────────────────────────────────────────── */
+
+.glass-panel {
+  background: linear-gradient(135deg, rgba(16, 16, 40, 0.7), rgba(12, 12, 29, 0.5));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 212, 255, 0.06);
+  border-radius: 20px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-panel:hover {
+  border-color: rgba(0, 212, 255, 0.12);
+}
+
+.glass-panel-strong {
+  background: linear-gradient(180deg, rgba(16, 16, 40, 0.9), rgba(10, 10, 24, 0.95));
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(0, 212, 255, 0.08);
+  border-radius: 20px;
+}
+
+/* ── Neon Utilities ────────────────────────────────────────── */
+
+.neon-text-blue {
+  color: var(--color-neon-blue);
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5), 0 0 30px rgba(0, 212, 255, 0.2);
+}
+
+.neon-text-purple {
+  color: var(--color-neon-purple);
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5), 0 0 30px rgba(139, 92, 246, 0.2);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-neon-blue) 0%, var(--color-neon-purple) 50%, var(--color-neon-pink) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.neon-border {
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.neon-glow-blue {
+  box-shadow: 0 4px 30px rgba(0, 212, 255, 0.12), 0 0 60px rgba(0, 212, 255, 0.04);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 4px 30px rgba(139, 92, 246, 0.12), 0 0 60px rgba(139, 92, 246, 0.04);
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+
+.btn-neon {
+  position: relative;
+  padding: 12px 28px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-neon-blue);
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.btn-neon:hover {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: rgba(0, 212, 255, 0.4);
+  box-shadow: 0 4px 24px rgba(0, 212, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn-neon-filled {
+  position: relative;
+  padding: 14px 32px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-neon-blue), var(--color-neon-purple));
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2), 0 0 40px rgba(139, 92, 246, 0.1);
+}
+
+.btn-neon-filled:hover {
+  box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3), 0 0 60px rgba(139, 92, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+/* ── Background Grid ───────────────────────────────────────── */
+
+.cyber-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(0, 212, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.03) 0%, transparent 50%),
+    linear-gradient(rgba(0, 212, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 80px 80px, 80px 80px;
+}
+
+/* ── Animations ────────────────────────────────────────────── */
+
+@keyframes pulse-neon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes scan-line {
+  0% { top: -5%; }
+  100% { top: 105%; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.1); }
+  50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.2), 0 0 60px rgba(139, 92, 246, 0.1); }
+}
+
+.animate-pulse-neon { animation: pulse-neon 2s ease-in-out infinite; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+
+.shimmer-bg {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* ── Card Variants ─────────────────────────────────────────── */
+
+.card-elevated {
+  background: linear-gradient(145deg, rgba(20, 20, 47, 0.8), rgba(12, 12, 29, 0.6));
+  border: 1px solid rgba(0, 212, 255, 0.05);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-elevated:hover {
+  border-color: rgba(0, 212, 255, 0.1);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 212, 255, 0.05);
+  transform: translateY(-3px);
+}
+
+/* ── Accent dot indicator ──────────────────────────────────── */
+
+.accent-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-neon-blue);
+  box-shadow: 0 0 8px var(--color-neon-blue);
+}
+
+/* ── Input Styles ──────────────────────────────────────────── */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"] {
+  font-family: var(--font-body);
+}
+
+/* ── Responsive Utilities ──────────────────────────────────── */
+
+@media (max-width: 768px) {
+  html { font-size: 14px; }
+  .glass-panel, .glass-panel-strong, .card-elevated {
+    border-radius: 16px;
+  }
+}
+
+/* ── Google Translate Stylings ─────────────────────────────── */
+
+.google-translate-dropdown {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.google-translate-dropdown select.goog-te-combo {
+  background: rgba(20, 20, 47, 0.6) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  border-radius: 8px !important;
+  padding: 4px 8px !important;
+  font-family: var(--font-body) !important;
+  font-size: 11px !important;
+  outline: none !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer !important;
+}
+
+.google-translate-dropdown select.goog-te-combo:hover {
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.1) !important;
+}
+
+/* Hide standard Google Translate top banner */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner,
+.goog-te-balloon-frame,
+#goog-gt-tt,
+.skiptranslate[style*="visibility: visible"] {
+  display: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
