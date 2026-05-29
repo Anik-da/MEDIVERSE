@@ -140,8 +140,7 @@ export default function Auth() {
       <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-neon-blue/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-neon-purple/5 blur-[120px] pointer-events-none" />
 
-      {/* Hidden Recaptcha container mandated by Firebase */}
-      <div id="recaptcha-container" className="absolute invisible"></div>
+
 
       <div className="w-full max-w-[460px] relative z-10">
         {/* MediVerse AI brand header */}
