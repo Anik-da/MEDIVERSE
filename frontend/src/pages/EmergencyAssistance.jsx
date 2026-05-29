@@ -26,7 +26,7 @@ export default function EmergencyAssistance() {
   const [eta, setEta] = useState('~8 min')
   const [nearestHospital, setNearestHospital] = useState('Apollo Hospital')
 
-  const { currentUser } = useAuth()
+  const { currentUser, userProfile } = useAuth()
 
   const triggerSOS = () => {
     setShowPopup(true)
@@ -48,6 +48,25 @@ export default function EmergencyAssistance() {
           navigator.geolocation.getCurrentPosition(async (pos) => {
             const { latitude, longitude } = pos.coords
             
+            // Send webhook POST to amitprakesh.app.n8n.cloud
+            try {
+              await fetch('https://amitprakesh.app.n8n.cloud/webhook/emergency-SOS', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  name: userProfile?.name || currentUser?.displayName || "MediVerse AI Patient",
+                  phone: currentUser?.phoneNumber || userProfile?.phone || "Emergency Line",
+                  latitude: latitude,
+                  longitude: longitude,
+                  emergency_type: 'Critical'
+                })
+              })
+            } catch (err) {
+              console.error("SOS Webhook submission failed:", err)
+            }
+
             try {
               const idToken = await currentUser.getIdToken()
               // Call API
@@ -87,6 +106,25 @@ export default function EmergencyAssistance() {
             const fallbackLat = 22.5726
             const fallbackLng = 88.3639
             
+            // Send webhook POST to amitprakesh.app.n8n.cloud with fallback
+            try {
+              await fetch('https://amitprakesh.app.n8n.cloud/webhook/emergency-SOS', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  name: userProfile?.name || currentUser?.displayName || "MediVerse AI Patient",
+                  phone: currentUser?.phoneNumber || userProfile?.phone || "Emergency Line",
+                  latitude: fallbackLat,
+                  longitude: fallbackLng,
+                  emergency_type: 'Critical'
+                })
+              })
+            } catch (wErr) {
+              console.error("SOS Webhook fallback submission failed:", wErr)
+            }
+
             try {
               const idToken = await currentUser.getIdToken()
               const res = await fetch('http://localhost:8000/emergency-alert', {
@@ -124,6 +162,25 @@ export default function EmergencyAssistance() {
           // If Geolocation is completely unavailable
           const fallbackLat = 22.5726
           const fallbackLng = 88.3639
+          
+          try {
+            await fetch('https://amitprakesh.app.n8n.cloud/webhook/emergency-SOS', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                name: userProfile?.name || currentUser?.displayName || "MediVerse AI Patient",
+                phone: currentUser?.phoneNumber || userProfile?.phone || "Emergency Line",
+                latitude: fallbackLat,
+                longitude: fallbackLng,
+                emergency_type: 'Critical'
+              })
+            })
+          } catch (wErr) {
+            console.error("SOS Webhook unsupported fallback failed:", wErr)
+          }
+
           await saveEmergencyLog(currentUser.uid, {
             latitude: fallbackLat,
             longitude: fallbackLng,

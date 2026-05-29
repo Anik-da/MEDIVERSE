@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Phone, Shield, Chrome, ArrowRight, HeartPulse, Sparkles, KeyRound, ArrowLeft } from 'lucide-react'
+import { Phone, Shield, ArrowRight, HeartPulse, Sparkles, KeyRound, ArrowLeft } from 'lucide-react'
 import GlowCard from '../components/GlowCard'
 
 export default function Auth() {
@@ -330,7 +330,7 @@ export default function Auth() {
               disabled={loading}
               className="w-full py-2.5 rounded-xl bg-white/[0.02] border border-cyber-border/40 hover:bg-white/[0.05] hover:border-cyber-border/60 text-xs text-text-primary font-medium flex items-center justify-center gap-2 cursor-pointer transition-all"
             >
-              <Chrome size={14} className="text-neon-blue" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" className="mr-1"><path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.5a5.99 5.99 0 0 1 5.99-6.013c1.49 0 2.854.55 3.907 1.455l3.057-3.057C19.102 3.1 16.697 2 13.99 2 8.163 2 3.5 6.663 3.5 12.5S8.163 23 13.99 23c5.383 0 9.877-3.85 9.877-9.5 0-.712-.083-1.4-.217-2.073l-11.41-.142z"/></svg>
               <span>Sign in with Google Account</span>
             </motion.button>
           </GlowCard>

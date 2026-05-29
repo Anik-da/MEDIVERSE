@@ -48,7 +48,7 @@ import {
   getDownloadURL,
 } from 'firebase/storage'
 
-import { auth, db, rtdb, storage } from './firebase'
+import { auth, db, rtdb, storage } from '../firebase'
 
 /* ═══════════════════════════════════════════════════════════
    AUTH SERVICES
