@@ -47,9 +47,7 @@ export default function Sidebar({ isOpen, onToggle }) {
     >
       {/* Brand Header inside Sidebar */}
       <div className="flex items-center gap-3 px-4 h-20 border-b border-cyber-border">
-        <div className="w-10 h-10 rounded-xl bg-neon-blue flex items-center justify-center flex-shrink-0 shadow-md shadow-neon-blue/15">
-          <HeartPulse size={20} className="text-white" />
-        </div>
+        <img src="/logo.png" alt="MediVerse Logo" className="w-10 h-10 object-contain rounded-xl flex-shrink-0" />
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, x: -8 }}

@@ -71,9 +71,7 @@ export default function Landing() {
         className="fixed top-0 left-0 right-0 z-50 h-20 flex items-center justify-between px-8 bg-white border-b border-cyber-border"
       >
         <div className="flex items-center gap-3 select-none cursor-pointer" onClick={() => navigate('/')}>
-          <div className="w-10 h-10 rounded-xl bg-neon-blue flex items-center justify-center shadow-md shadow-neon-blue/10">
-            <HeartPulse size={20} className="text-white" />
-          </div>
+          <img src="/logo.png" alt="MediVerse Logo" className="w-10 h-10 object-contain rounded-xl" />
           <span className="font-heading font-extrabold text-lg text-neon-blue tracking-wide">
             MEDIVERSE AI
           </span>

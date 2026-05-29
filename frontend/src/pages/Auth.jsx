@@ -269,9 +269,8 @@ export default function Auth() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            className="w-12 h-12 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center mb-3 shadow-[0_0_20px_rgba(15,76,129,0.15)] border border-cyber-border"
           >
-            <HeartPulse size={24} className="text-white" />
+            <img src="/logo.png" alt="MediVerse Logo" className="w-12 h-12 object-contain rounded-xl mb-3 shadow-[0_0_20px_rgba(15,76,129,0.06)] border border-[#E2E8F0]" />
           </motion.div>
           <motion.h1
             initial={{ y: 10, opacity: 0 }}

@@ -29,9 +29,7 @@ export default function Navbar({ onMenuToggle }) {
 
         {/* Logo Branding */}
         <div onClick={() => navigate('/home')} className="flex items-center gap-2 cursor-pointer select-none">
-          <div className="w-10 h-10 rounded-xl bg-neon-blue flex items-center justify-center shadow-lg shadow-neon-blue/15">
-            <HeartPulse size={20} className="text-white" />
-          </div>
+          <img src="/logo.png" alt="MediVerse Logo" className="w-10 h-10 object-contain rounded-xl" />
           <span className="font-heading font-extrabold text-lg text-neon-blue tracking-wide hidden sm:block">
             MEDIVERSE AI
           </span>
