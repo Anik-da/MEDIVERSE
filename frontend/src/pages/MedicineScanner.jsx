@@ -78,7 +78,8 @@ export default function MedicineScanner() {
         console.warn("FastAPI scan failed, attempting direct HuggingFace query fallback...", apiErr)
         try {
           const prompt = "Extract active pharmaceutical ingredients, dosage guidelines, precautions, and side effects for Calpol Paracetamol 500mg tablets."
-          const hfResponse = await queryHuggingFaceDirect(prompt, "ruslanmv/Medical-Llama3-8B")
+          const hfResponse = await queryHuggingFaceDirect(prompt, "google/gemma-4-E4B-it")
+
           if (hfResponse) {
             finalResult = {
               name: "Paracetamol 500mg",

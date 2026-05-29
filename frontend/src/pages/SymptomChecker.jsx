@@ -71,7 +71,8 @@ export default function SymptomChecker() {
         const symptomsStr = symptoms.join(", ")
         const prompt = `The patient reports the following symptoms: ${symptomsStr}. Diagnose the most likely disease condition. Provide the primary predicted disease name, confidence percentage (1-100), severity level (Low, Medium, or High), and list 3 recommendations.`
         
-        const hfResponse = await queryHuggingFaceDirect(prompt, "ruslanmv/Medical-Llama3-8B")
+        const hfResponse = await queryHuggingFaceDirect(prompt, "google/gemma-4-E4B-it")
+
         
         if (hfResponse) {
           const directResult = [

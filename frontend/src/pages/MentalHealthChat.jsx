@@ -72,7 +72,8 @@ export default function MentalHealthChat() {
       console.warn("FastAPI offline, calling direct HuggingFace model...", err)
       try {
         const prompt = `You are a supportive, calm mental health wellness companion. The user mood is ${selectedMood || 'neutral'}. The user says: '${textStr}'. Provide an empathetic response in 2-3 sentences.`
-        const hfResponse = await queryHuggingFaceDirect(prompt, "ruslanmv/Medical-Llama3-8B")
+        const hfResponse = await queryHuggingFaceDirect(prompt, "google/gemma-4-E4B-it")
+
         
         if (hfResponse) {
           const parsedRes = hfResponse.includes("[/INST]") ? hfResponse.split("[/INST]").pop().trim() : hfResponse

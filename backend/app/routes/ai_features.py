@@ -81,7 +81,8 @@ async def predict_disease(request: SymptomRequest, user: dict = Depends(get_curr
     )
     
     # Query a highly capable general/medical generation model for detailed insights
-    hf_response = await query_huggingface_model(prompt, model_name="ruslanmv/Medical-Llama3-8B")
+    hf_response = await query_huggingface_model(prompt, model_name="google/gemma-4-E4B-it")
+
     
     if hf_response:
         # Parse and format the AI response
@@ -160,14 +161,15 @@ async def emergency_alert(request: EmergencyAlertRequest, user: dict = Depends(g
 @router.post("/mental-health-chat")
 async def mental_health_chat(request: MentalHealthMessage, user: dict = Depends(get_current_user)):
     """
-    AI mental health companion response using ruslanmv/Medical-Llama3-8B.
+    AI mental health companion response using google/gemma-4-E4B-it.
     """
     prompt = (
         f"You are a supportive, calm medical mental health wellness companion. The user mood is {request.mood or 'neutral'}. "
         f"The user says: '{request.message}'. Provide an empathetic, helpful response in 2-3 sentences."
     )
     
-    ai_response = await query_huggingface_model(prompt, model_name="ruslanmv/Medical-Llama3-8B")
+    ai_response = await query_huggingface_model(prompt, model_name="google/gemma-4-E4B-it")
+
     
     if ai_response:
         if "[/INST]" in ai_response:
@@ -206,7 +208,8 @@ async def voice_diagnosis(user: dict = Depends(get_current_user)):
         "Analyze this simulated voice diagnosis transcription: 'Patient reports persistent dry cough for three days.' "
         "Provide key cough patterns, stress level indicators, and 3 clinical suggestions."
     )
-    transcript_analysis = await query_huggingface_model(voice_prompt, model_name="ruslanmv/Medical-Llama3-8B")
+    transcript_analysis = await query_huggingface_model(voice_prompt, model_name="google/gemma-4-E4B-it")
+
     
     return {
         "status": "success",
@@ -232,7 +235,8 @@ async def medicine_scan(user: dict = Depends(get_current_user)):
         "Extract active pharmaceutical ingredients, dosage guidelines, and precautions for: "
         "Calpol Paracetamol 500mg tablets."
     )
-    parsed_report = await query_huggingface_model(med_prompt, model_name="ruslanmv/Medical-Llama3-8B")
+    parsed_report = await query_huggingface_model(med_prompt, model_name="google/gemma-4-E4B-it")
+
     
     return {
         "status": "success",

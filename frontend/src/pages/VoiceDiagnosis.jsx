@@ -151,7 +151,7 @@ export default function VoiceDiagnosis() {
             "Analyze this simulated voice diagnosis transcription: 'Patient reports persistent dry cough for three days.' " +
             "Provide key cough patterns, stress level indicators, and 3 clinical suggestions."
 
-          const hfResponse = await queryHuggingFaceDirect(voicePrompt, "ruslanmv/Medical-Llama3-8B")
+          const hfResponse = await queryHuggingFaceDirect(voicePrompt, "google/gemma-4-E4B-it")
           if (hfResponse) {
             finalAnalysis = {
               transcript: "Patient reports persistent dry cough for three days.",

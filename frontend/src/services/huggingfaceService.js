@@ -4,7 +4,7 @@
  * if the local FastAPI backend is unavailable or not running.
  */
 
-export async function queryHuggingFaceDirect(prompt, modelName = "ruslanmv/Medical-Llama3-8B") {
+export async function queryHuggingFaceDirect(prompt, modelName = "google/gemma-4-E4B-it") {
   const url = `https://api-inference.huggingface.co/models/${modelName}`;
   const payload = {
     inputs: prompt,
