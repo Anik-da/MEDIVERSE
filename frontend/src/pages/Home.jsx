@@ -7,6 +7,8 @@ import {
 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import StatCard from '../components/StatCard'
+import { useAuth } from '../context/AuthContext'
+
 
 const quickActions = [
   { icon: Stethoscope, label: 'Symptom Checker', path: '/symptom-checker', color: '#00D4FF', desc: 'AI-powered symptom analysis & disease prediction' },
@@ -27,6 +29,20 @@ const activity = [
 
 export default function Home() {
   const navigate = useNavigate()
+  const { currentUser } = useAuth()
+  
+  // Calculate dynamic greeting based on active time of day
+  const currentHour = new Date().getHours()
+  let greeting = 'Good Morning'
+  if (currentHour >= 12 && currentHour < 17) {
+    greeting = 'Good Afternoon'
+  } else if (currentHour >= 17 && currentHour < 22) {
+    greeting = 'Good Evening'
+  } else if (currentHour >= 22 || currentHour < 5) {
+    greeting = 'Good Night'
+  }
+
+  const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Anik'
 
   return (
     <div className="max-w-[1400px] mx-auto">
@@ -38,10 +54,11 @@ export default function Home() {
         className="mb-6"
       >
         <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-bold text-text-primary">Good Morning, Anik 👋</h1>
+          <h1 className="text-2xl font-bold text-text-primary capitalize">{greeting}, {userName} 👋</h1>
         </div>
         <p className="text-text-secondary text-sm">Here's your health overview for today. Your AI companion is ready to assist.</p>
       </motion.div>
+
 
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
