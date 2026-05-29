@@ -225,6 +225,9 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-cyber-black relative overflow-hidden px-4 py-8">
+      {/* Invisible Recaptcha Element */}
+      <div id="recaptcha-container" className="hidden"></div>
+
       {/* Cyber grid background */}
       <div className="cyber-grid" />
 
