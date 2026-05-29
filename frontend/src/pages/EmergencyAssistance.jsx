@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, Phone, MapPin, Heart, Shield, Clock, X, Mail } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
@@ -28,6 +28,8 @@ export default function EmergencyAssistance() {
   const [loadingAlert, setLoadingAlert] = useState(false)
   const [alertSuccess, setAlertSuccess] = useState(false)
   const [alertError, setAlertError] = useState('')
+  const [liveCoords, setLiveCoords] = useState(null)
+  const [locationStatus, setLocationStatus] = useState('detecting')
 
   const { currentUser, userProfile } = useAuth()
 
@@ -41,6 +43,26 @@ export default function EmergencyAssistance() {
       email: userProfile.emergencyEmail
     }] : [])
   ]
+
+  // Auto-detect GPS location on page load
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLiveCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          setLocationStatus('active')
+        },
+        () => {
+          setLiveCoords({ lat: 12.9716, lng: 77.5946 })
+          setLocationStatus('fallback')
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      )
+    } else {
+      setLiveCoords({ lat: 12.9716, lng: 77.5946 })
+      setLocationStatus('unsupported')
+    }
+  }, [])
 
   const triggerSOS = async () => {
     setLoadingAlert(true)
@@ -228,26 +250,18 @@ export default function EmergencyAssistance() {
       )}
 
       {/* ===== SECTION 1: SOS Hero Button — Full Width ===== */}
-      <GlowCard hover={false} glowColor="neon-red" className="bg-white border border-cyber-border rounded-3xl p-8">
+      <GlowCard hover={false} glowColor="neon-red" className="bg-white border border-cyber-border rounded-2xl p-8">
         <div className="flex flex-col items-center py-4">
           <motion.button
             onClick={triggerSOS}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
             disabled={loadingAlert}
             className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full cursor-pointer flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {/* Outer pulse rings */}
-            <motion.div animate={{ scale: [1, 1.6], opacity: [0.35, 0] }} transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-0 rounded-full border-2 border-red-500 pointer-events-none" />
-            <motion.div animate={{ scale: [1, 1.35], opacity: [0.25, 0] }} transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-              className="absolute inset-0 rounded-full border-2 border-red-500 pointer-events-none" />
-            <motion.div animate={{ scale: [1, 1.15], opacity: [0.15, 0] }} transition={{ duration: 2, repeat: Infinity, delay: 1.2 }}
-              className="absolute inset-0 rounded-full border-2 border-red-400 pointer-events-none" />
-
-            {/* Solid red button face */}
+            {/* Solid red button — no pulse rings */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center"
-              style={{ boxShadow: '0 0 50px rgba(239,68,68,0.45), 0 8px 30px rgba(239,68,68,0.3)' }}>
+              style={{ boxShadow: '0 0 40px rgba(239,68,68,0.35)' }}>
               <div className="text-center">
                 <AlertTriangle size={42} className="text-white mx-auto mb-2" />
                 <span className="font-heading text-3xl font-black text-white tracking-widest block">SOS</span>
@@ -256,7 +270,7 @@ export default function EmergencyAssistance() {
             </div>
           </motion.button>
 
-          <p className="text-sm text-red-500 mt-6 text-center font-bold uppercase tracking-wider animate-pulse">
+          <p className="text-sm text-red-500 mt-6 text-center font-bold uppercase tracking-wider">
             🔴 Tap above to broadcast emergency alert
           </p>
         </div>
@@ -266,7 +280,7 @@ export default function EmergencyAssistance() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Emergency Contacts */}
-        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-3xl p-6">
+        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-2xl p-6">
           <h3 className="text-sm font-bold mb-5 text-text-primary flex items-center gap-2.5 uppercase tracking-wider">
             <Phone size={18} className="text-red-500" /> Emergency Contacts
           </h3>
@@ -293,28 +307,51 @@ export default function EmergencyAssistance() {
         </GlowCard>
 
         {/* Live Location Tracking */}
-        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-3xl p-6">
+        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-2xl p-6">
           <h3 className="text-sm font-bold mb-5 text-text-primary flex items-center gap-2.5 uppercase tracking-wider">
             <MapPin size={18} className="text-neon-blue" /> Live Location Tracking
           </h3>
-          <div className="h-56 rounded-2xl bg-cyber-black border border-cyber-border flex items-center justify-center relative overflow-hidden text-center p-6">
-            <div className="absolute top-4 right-4 z-10 bg-white/95 px-3.5 py-1.5 rounded-full border border-cyber-border flex items-center gap-2 shadow-sm">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs text-text-primary font-bold">Satellite Sync</span>
+          <div className="rounded-2xl bg-cyber-black border border-cyber-border relative overflow-hidden text-center p-6">
+            <div className="absolute top-4 right-4 z-10 bg-white/95 px-3.5 py-1.5 rounded-lg border border-cyber-border flex items-center gap-2 shadow-sm">
+              <div className={`w-2 h-2 rounded-full ${locationStatus === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+              <span className="text-xs text-text-primary font-bold">{locationStatus === 'active' ? 'Live GPS' : locationStatus === 'detecting' ? 'Detecting...' : 'Fallback'}</span>
             </div>
-            <div>
-              <MapPin size={32} className="text-neon-blue mx-auto mb-3 animate-bounce" />
-              <p className="text-sm font-bold text-text-primary">GPS Coordinate Stream</p>
-              <p className="text-xs text-text-secondary mt-2 max-w-xs mx-auto leading-relaxed">
-                {userProfile?.location ? `Registered Address: ${userProfile.location}` : 'Awaiting live GPS coordinates from your device...'}
-              </p>
+            <div className="py-4">
+              <MapPin size={32} className="text-neon-blue mx-auto mb-3" />
+              {liveCoords ? (
+                <>
+                  <p className="text-sm font-bold text-text-primary">Location Detected</p>
+                  <div className="mt-3 flex items-center justify-center gap-6">
+                    <div>
+                      <p className="text-[10px] text-text-muted uppercase tracking-wider">Latitude</p>
+                      <p className="text-base font-bold text-neon-blue">{liveCoords.lat.toFixed(4)}</p>
+                    </div>
+                    <div className="w-px h-8 bg-cyber-border" />
+                    <div>
+                      <p className="text-[10px] text-text-muted uppercase tracking-wider">Longitude</p>
+                      <p className="text-base font-bold text-neon-blue">{liveCoords.lng.toFixed(4)}</p>
+                    </div>
+                  </div>
+                  {userProfile?.location && (
+                    <p className="text-xs text-text-secondary mt-3">Address: {userProfile.location}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-text-primary">Detecting GPS Coordinates...</p>
+                  <div className="relative w-8 h-8 mx-auto mt-3">
+                    <div className="absolute inset-0 rounded-full border-2 border-slate-200" />
+                    <div className="absolute inset-0 rounded-full border-2 border-neon-blue border-t-transparent animate-spin" />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </GlowCard>
       </div>
 
       {/* ===== SECTION 3: First-Aid Guidance — Full Width ===== */}
-      <GlowCard hover={false} className="bg-white border border-cyber-border rounded-3xl p-6">
+      <GlowCard hover={false} className="bg-white border border-cyber-border rounded-2xl p-6">
         <h3 className="text-sm font-bold mb-5 text-text-primary flex items-center gap-2.5 uppercase tracking-wider">
           <Heart size={18} className="text-neon-purple" /> Instant First-Aid Guidance
         </h3>
