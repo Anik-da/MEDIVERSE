@@ -195,153 +195,150 @@ export default function EmergencyAssistance() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader icon={AlertTriangle} title="Emergency Assistance" subtitle="One-tap SOS with live location, first-aid, and real-time guardian notification." accentColor="neon-red" />
 
       {/* Status Banners */}
       {sosActive && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-2xl bg-red-500/5 border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          className="p-5 rounded-xl bg-red-500/5 border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 animate-pulse flex-shrink-0">
-              <AlertTriangle size={22} />
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 animate-pulse flex-shrink-0">
+              <AlertTriangle size={24} />
             </div>
             <div>
-              <p className="text-sm font-bold text-red-500 uppercase tracking-wide">Emergency Alert Active</p>
-              <p className="text-xs text-text-secondary mt-1">
-                Dispatched to: <strong className="text-text-primary">{userProfile?.emergencyNumber || 'Not registered'}</strong> · {userProfile?.emergencyEmail || 'No email'}
+              <p className="text-base font-bold text-red-500 uppercase tracking-wide">Emergency Alert Active</p>
+              <p className="text-sm text-text-secondary mt-1">
+                Dispatched to: <strong className="text-text-primary">{userProfile?.emergencyNumber || 'Not set'}</strong> · {userProfile?.emergencyEmail || 'No email'}
               </p>
             </div>
           </div>
-          <span className="text-xs bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-1.5 rounded-full font-bold tracking-wide flex-shrink-0">DISPATCHING</span>
+          <span className="text-xs bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg font-bold tracking-wide flex-shrink-0">DISPATCHING</span>
         </motion.div>
       )}
 
       {alertSuccess && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          className="p-5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 animate-pulse flex-shrink-0">
-              <Shield size={22} />
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 animate-pulse flex-shrink-0">
+              <Shield size={24} />
             </div>
             <div>
-              <p className="text-sm font-bold text-emerald-500 uppercase tracking-wide">Emergency Alert Sent Successfully</p>
-              <p className="text-xs text-text-secondary mt-1">Your coordinates and medical data have been received by the emergency response system.</p>
+              <p className="text-base font-bold text-emerald-500 uppercase tracking-wide">Emergency Alert Sent Successfully</p>
+              <p className="text-sm text-text-secondary mt-1">Your coordinates and medical data have been received by the emergency response system.</p>
             </div>
           </div>
-          <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-4 py-1.5 rounded-full font-bold tracking-wide flex-shrink-0">TRANSMITTED</span>
+          <span className="text-xs bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-lg font-bold tracking-wide flex-shrink-0">TRANSMITTED</span>
         </motion.div>
       )}
 
       {alertError && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-2xl bg-red-500/5 border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          className="p-5 rounded-xl bg-red-500/5 border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0">
-              <AlertTriangle size={22} />
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 flex-shrink-0">
+              <AlertTriangle size={24} />
             </div>
             <div>
-              <p className="text-sm font-bold text-red-500 uppercase tracking-wide">SOS Transmission Error</p>
-              <p className="text-xs text-text-secondary mt-1">{alertError}</p>
+              <p className="text-base font-bold text-red-500 uppercase tracking-wide">SOS Transmission Error</p>
+              <p className="text-sm text-text-secondary mt-1">{alertError}</p>
             </div>
           </div>
-          <span className="text-xs bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-1.5 rounded-full font-bold tracking-wide flex-shrink-0">FAILED</span>
+          <span className="text-xs bg-red-500/10 text-red-500 border border-red-500/20 px-4 py-2 rounded-lg font-bold tracking-wide flex-shrink-0">FAILED</span>
         </motion.div>
       )}
 
-      {/* ===== SECTION 1: SOS Hero Button — Full Width ===== */}
-      <GlowCard hover={false} glowColor="neon-red" className="bg-white border border-cyber-border rounded-2xl p-8">
-        <div className="flex flex-col items-center py-4">
+      {/* ===== SOS Button ===== */}
+      <GlowCard hover={false} glowColor="neon-red" className="bg-white border border-cyber-border rounded-xl !p-10">
+        <div className="flex flex-col items-center">
           <motion.button
             onClick={triggerSOS}
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
             disabled={loadingAlert}
-            className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-full cursor-pointer flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+            className="relative w-52 h-52 sm:w-60 sm:h-60 rounded-full cursor-pointer flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {/* Solid red button — no pulse rings */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center"
-              style={{ boxShadow: '0 0 40px rgba(239,68,68,0.35)' }}>
+              style={{ boxShadow: '0 0 40px rgba(239,68,68,0.3)' }}>
               <div className="text-center">
-                <AlertTriangle size={42} className="text-white mx-auto mb-2" />
-                <span className="font-heading text-3xl font-black text-white tracking-widest block">SOS</span>
-                <span className="text-[11px] uppercase font-bold text-white/80 tracking-widest mt-1 block">Tap to Alert</span>
+                <AlertTriangle size={48} className="text-white mx-auto mb-2" />
+                <span className="font-heading text-4xl font-black text-white tracking-widest block">SOS</span>
+                <span className="text-xs uppercase font-bold text-white/80 tracking-widest mt-1 block">Tap to Alert</span>
               </div>
             </div>
           </motion.button>
-
-          <p className="text-sm text-red-500 mt-6 text-center font-bold uppercase tracking-wider">
+          <p className="text-base text-red-500 mt-8 text-center font-bold uppercase tracking-wider">
             🔴 Tap above to broadcast emergency alert
           </p>
         </div>
       </GlowCard>
 
-      {/* ===== SECTION 2: Contacts + Location — Side by Side ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+      {/* ===== Contacts + Location ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Emergency Contacts */}
-        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-2xl p-6">
-          <h3 className="text-sm font-bold mb-5 text-text-primary flex items-center gap-2.5 uppercase tracking-wider">
-            <Phone size={18} className="text-red-500" /> Emergency Contacts
+        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-xl !p-8">
+          <h3 className="text-base font-bold mb-6 text-text-primary flex items-center gap-3 uppercase tracking-wider">
+            <Phone size={20} className="text-red-500" /> Emergency Contacts
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {activeContacts.map((c, i) => {
               const Icon = c.icon
               return (
                 <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.08 }}
-                  className="flex items-center justify-between p-4 rounded-xl bg-cyber-black border border-cyber-border hover:border-red-500/20 transition-all text-left">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-red-500/8 border border-red-500/10 flex items-center justify-center">
-                      <Icon size={18} className="text-red-500" />
+                  className="flex items-center justify-between p-5 rounded-xl bg-cyber-black border border-cyber-border hover:border-red-500/20 transition-all text-left">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-red-500/8 border border-red-500/10 flex items-center justify-center">
+                      <Icon size={20} className="text-red-500" />
                     </div>
                     <div>
-                      <span className="text-sm font-semibold text-text-primary block">{c.name}</span>
-                      {c.email && <span className="text-xs text-text-muted mt-0.5 block">{c.email}</span>}
+                      <span className="text-base font-semibold text-text-primary block">{c.name}</span>
+                      {c.email && <span className="text-sm text-text-muted mt-1 block">{c.email}</span>}
                     </div>
                   </div>
-                  <span className="font-heading text-base font-bold text-red-500">{c.number}</span>
+                  <span className="font-heading text-lg font-bold text-red-500">{c.number}</span>
                 </motion.div>
               )
             })}
           </div>
         </GlowCard>
 
-        {/* Live Location Tracking */}
-        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-2xl p-6">
-          <h3 className="text-sm font-bold mb-5 text-text-primary flex items-center gap-2.5 uppercase tracking-wider">
-            <MapPin size={18} className="text-neon-blue" /> Live Location Tracking
+        {/* Live Location */}
+        <GlowCard hover={false} className="bg-white border border-cyber-border rounded-xl !p-8">
+          <h3 className="text-base font-bold mb-6 text-text-primary flex items-center gap-3 uppercase tracking-wider">
+            <MapPin size={20} className="text-neon-blue" /> Live Location Tracking
           </h3>
-          <div className="rounded-2xl bg-cyber-black border border-cyber-border relative overflow-hidden text-center p-6">
-            <div className="absolute top-4 right-4 z-10 bg-white/95 px-3.5 py-1.5 rounded-lg border border-cyber-border flex items-center gap-2 shadow-sm">
-              <div className={`w-2 h-2 rounded-full ${locationStatus === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
-              <span className="text-xs text-text-primary font-bold">{locationStatus === 'active' ? 'Live GPS' : locationStatus === 'detecting' ? 'Detecting...' : 'Fallback'}</span>
+          <div className="rounded-xl bg-cyber-black border border-cyber-border relative overflow-hidden text-center p-8">
+            <div className="absolute top-4 right-4 z-10 bg-white/95 px-4 py-2 rounded-lg border border-cyber-border flex items-center gap-2 shadow-sm">
+              <div className={`w-2.5 h-2.5 rounded-full ${locationStatus === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+              <span className="text-sm text-text-primary font-bold">{locationStatus === 'active' ? 'Live GPS' : locationStatus === 'detecting' ? 'Detecting...' : 'Fallback'}</span>
             </div>
-            <div className="py-4">
-              <MapPin size={32} className="text-neon-blue mx-auto mb-3" />
+            <div className="py-6">
+              <MapPin size={36} className="text-neon-blue mx-auto mb-4" />
               {liveCoords ? (
                 <>
-                  <p className="text-sm font-bold text-text-primary">Location Detected</p>
-                  <div className="mt-3 flex items-center justify-center gap-6">
+                  <p className="text-base font-bold text-text-primary mb-5">Location Detected</p>
+                  <div className="flex items-center justify-center gap-10">
                     <div>
-                      <p className="text-[10px] text-text-muted uppercase tracking-wider">Latitude</p>
-                      <p className="text-base font-bold text-neon-blue">{liveCoords.lat.toFixed(4)}</p>
+                      <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Latitude</p>
+                      <p className="text-xl font-bold text-neon-blue">{liveCoords.lat.toFixed(4)}</p>
                     </div>
-                    <div className="w-px h-8 bg-cyber-border" />
+                    <div className="w-px h-10 bg-cyber-border" />
                     <div>
-                      <p className="text-[10px] text-text-muted uppercase tracking-wider">Longitude</p>
-                      <p className="text-base font-bold text-neon-blue">{liveCoords.lng.toFixed(4)}</p>
+                      <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Longitude</p>
+                      <p className="text-xl font-bold text-neon-blue">{liveCoords.lng.toFixed(4)}</p>
                     </div>
                   </div>
                   {userProfile?.location && (
-                    <p className="text-xs text-text-secondary mt-3">Address: {userProfile.location}</p>
+                    <p className="text-sm text-text-secondary mt-5">Address: {userProfile.location}</p>
                   )}
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-bold text-text-primary">Detecting GPS Coordinates...</p>
-                  <div className="relative w-8 h-8 mx-auto mt-3">
-                    <div className="absolute inset-0 rounded-full border-2 border-slate-200" />
-                    <div className="absolute inset-0 rounded-full border-2 border-neon-blue border-t-transparent animate-spin" />
+                  <p className="text-base font-bold text-text-primary mb-4">Detecting GPS Coordinates...</p>
+                  <div className="relative w-10 h-10 mx-auto">
+                    <div className="absolute inset-0 rounded-full border-3 border-slate-200" />
+                    <div className="absolute inset-0 rounded-full border-3 border-neon-blue border-t-transparent animate-spin" />
                   </div>
                 </>
               )}
@@ -350,16 +347,16 @@ export default function EmergencyAssistance() {
         </GlowCard>
       </div>
 
-      {/* ===== SECTION 3: First-Aid Guidance — Full Width ===== */}
-      <GlowCard hover={false} className="bg-white border border-cyber-border rounded-2xl p-6">
-        <h3 className="text-sm font-bold mb-5 text-text-primary flex items-center gap-2.5 uppercase tracking-wider">
-          <Heart size={18} className="text-neon-purple" /> Instant First-Aid Guidance
+      {/* ===== First-Aid Guidance ===== */}
+      <GlowCard hover={false} className="bg-white border border-cyber-border rounded-xl !p-8">
+        <h3 className="text-base font-bold mb-6 text-text-primary flex items-center gap-3 uppercase tracking-wider">
+          <Heart size={20} className="text-neon-purple" /> Instant First-Aid Guidance
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {firstAidSteps.map((item, i) => (
-            <div key={i} className="p-5 rounded-2xl bg-cyber-black border border-cyber-border text-left">
-              <span className="text-sm font-bold text-neon-blue uppercase tracking-wide">{item.title}</span>
-              <ul className="mt-3 space-y-2">
+            <div key={i} className="p-6 rounded-xl bg-cyber-black border border-cyber-border text-left">
+              <span className="text-base font-bold text-neon-blue uppercase tracking-wide">{item.title}</span>
+              <ul className="mt-4 space-y-3">
                 {item.steps.map((step, idx) => (
                   <li key={idx} className="text-sm text-text-secondary leading-relaxed flex items-start gap-2">
                     <span className="text-neon-blue select-none font-bold mt-0.5">•</span>
@@ -380,18 +377,18 @@ export default function EmergencyAssistance() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white border border-cyber-border p-10 rounded-3xl max-w-md w-full mx-4 text-center shadow-2xl relative overflow-hidden"
+              className="bg-white border border-cyber-border p-12 rounded-xl max-w-md w-full mx-4 text-center shadow-2xl relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 animate-pulse" />
-              <h3 className="font-heading text-lg font-extrabold text-red-500 uppercase tracking-wider mb-3 animate-pulse">Broadcasting Alert</h3>
-              <p className="text-sm text-text-secondary mb-8 leading-relaxed">
-                Querying satellite GPS coordinates and transmitting emergency payload to cloud response networks.
+              <h3 className="font-heading text-xl font-extrabold text-red-500 uppercase tracking-wider mb-4 animate-pulse">Broadcasting Alert</h3>
+              <p className="text-base text-text-secondary mb-10 leading-relaxed">
+                Querying satellite GPS coordinates and transmitting emergency payload to cloud networks.
               </p>
-              <div className="relative w-20 h-20 mx-auto mb-8">
+              <div className="relative w-20 h-20 mx-auto mb-10">
                 <div className="absolute inset-0 rounded-full border-4 border-slate-100" />
                 <div className="absolute inset-0 rounded-full border-4 border-red-500 border-t-transparent animate-spin" />
               </div>
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-widest block">Connecting secure tunnel...</span>
+              <span className="text-sm text-slate-400 font-bold uppercase tracking-widest block">Connecting secure tunnel...</span>
             </motion.div>
           </div>
         )}
@@ -399,3 +396,4 @@ export default function EmergencyAssistance() {
     </div>
   )
 }
+
