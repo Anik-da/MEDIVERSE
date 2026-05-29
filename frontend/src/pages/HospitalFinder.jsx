@@ -54,12 +54,13 @@ export default function HospitalFinder() {
     handleLocate()
   }, [])
 
-  // Build the OpenStreetMap iframe URL
+  // Build the Google Maps embed iframe URL (requires no API key and has 100% compatibility)
   const getMapUrl = () => {
     if (!coordinates) return ''
     const { latitude, longitude } = coordinates
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${longitude - 0.03}%2C${latitude - 0.02}%2C${longitude + 0.03}%2C${latitude + 0.02}&layer=mapnik&marker=${latitude}%2C${longitude}`
+    return `https://maps.google.com/maps?q=${latitude},${longitude}&z=14&output=embed`
   }
+
 
   return (
     <div className="space-y-8">
