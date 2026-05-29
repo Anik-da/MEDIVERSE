@@ -9,9 +9,9 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 import { signInAnonymously } from 'firebase/auth'
-import GlowCard from '../components/GlowCard'
 
 export default function Auth() {
+  const [authMode, setAuthMode] = useState('live') // 'live' or 'bypass'
   const [phoneNumber, setPhoneNumber] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [isOtpSent, setIsOtpSent] = useState(false)
@@ -19,7 +19,6 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [timer, setTimer] = useState(60)
   const [generatedOtp, setGeneratedOtp] = useState('')
-
 
   // Onboarding registration state variables
   const [isOnboarding, setIsOnboarding] = useState(false)
@@ -46,8 +45,6 @@ export default function Auth() {
     }
     return () => clearInterval(interval)
   }, [isOtpSent, timer])
-
-
 
   // Reset error when switching states
   const resetState = () => {
@@ -80,13 +77,13 @@ export default function Auth() {
       setIsOnboarding(true)
     } catch (err) {
       console.error("Profile check error:", err)
-      // Fallback: Proceed even if local session state synchronization has general errors
+      // Fallback
       setTempUser(user)
       setIsOnboarding(true)
     }
   }
 
-  // Handle phone submission — generates a local OTP instantly (no reCAPTCHA)
+  // Handle phone submission
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault()
     setError('')
@@ -112,13 +109,33 @@ export default function Auth() {
       }
     }
 
-    // Generate a 6-digit OTP locally — instant, no reCAPTCHA delay
-    const mockOtp = String(Math.floor(100000 + Math.random() * 900000))
-    setGeneratedOtp(mockOtp)
-    confirmationResultRef.current = null
-    setIsOtpSent(true)
-    setTimer(60)
-    setLoading(false)
+    if (authMode === 'live') {
+      try {
+        // Initialize reCAPTCHA verifier dynamically
+        const verifier = initRecaptcha('recaptcha-container')
+        
+        // Dispatch real SMS
+        const confirmationResult = await sendOtp(cleanPhone, verifier)
+        confirmationResultRef.current = confirmationResult
+        
+        setGeneratedOtp('')
+        setIsOtpSent(true)
+        setTimer(60)
+      } catch (err) {
+        console.error("Firebase SMS dispatch failed:", err)
+        setError(`Live SMS Dispatch failed: ${err.message || 'Please check your phone number and network.'}`)
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      // Generate a 6-digit OTP locally — instant, no reCAPTCHA delay
+      const mockOtp = String(Math.floor(100000 + Math.random() * 900000))
+      setGeneratedOtp(mockOtp)
+      confirmationResultRef.current = null
+      setIsOtpSent(true)
+      setTimer(60)
+      setLoading(false)
+    }
   }
 
   // Handle OTP confirmation
@@ -181,7 +198,6 @@ export default function Auth() {
           user = userCredential.user
         } catch (fbErr) {
           console.warn("Firebase Anonymous auth failed, using direct simulated session:", fbErr)
-          // Direct local simulation session fallback
           user = {
             uid: 'patient_' + Math.floor(100000 + Math.random() * 900000),
             phoneNumber: phoneNumber,
@@ -253,14 +269,14 @@ export default function Auth() {
         createdAt: serverTimestamp(),
       }
 
-      // Try to save in Firestore, with full fallback protection
+      // Try to save in Firestore
       try {
         await setDoc(doc(db, 'users', user.uid), profileData, { merge: true })
       } catch (firestoreErr) {
         console.warn("Firestore save failed, using local profile sync:", firestoreErr)
       }
 
-      // Sync the Context State so all subcomponents can fetch it instantly
+      // Sync the Context State
       await setSimulatedUser(user, profileData)
       navigate('/home')
     } catch (err) {
@@ -297,7 +313,7 @@ export default function Auth() {
       {/* Cyber grid background */}
       <div className="cyber-grid absolute inset-0 opacity-40 pointer-events-none" />
 
-      {/* Floating radial glow meshes for Glassmorphism backdrop */}
+      {/* Radial glows */}
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-neon-blue/10 blur-[130px] pointer-events-none animate-pulse" />
       <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-neon-purple/10 blur-[130px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
 
@@ -310,8 +326,8 @@ export default function Auth() {
             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
             className="relative"
           >
-            <div className="absolute inset-0 bg-neon-blue/30 rounded-2xl blur-md animate-pulse pointer-events-none" />
-            <img src="/logo.png" alt="MediVerse Logo" className="relative w-14 h-14 object-contain rounded-2xl mb-4 border border-white/20 shadow-[0_0_30px_rgba(59,130,246,0.3)] bg-slate-900/80 p-1" />
+            <div className="absolute inset-0 bg-neon-blue/30 rounded-none blur-md animate-pulse pointer-events-none" />
+            <img src="/logo.png" alt="MediVerse Logo" className="relative w-14 h-14 object-contain rounded-none mb-4 border border-white/20 shadow-[0_0_30px_rgba(59,130,246,0.3)] bg-slate-900/80 p-1" />
           </motion.div>
           
           <motion.h1
@@ -332,35 +348,46 @@ export default function Auth() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="relative bg-slate-950/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_0_50px_rgba(15,76,129,0.15)] p-8 md:p-10 overflow-hidden"
+          className="relative bg-slate-950/70 backdrop-blur-2xl border border-white/10 rounded-none shadow-[0_0_50px_rgba(15,76,129,0.15)] p-8 md:p-10 overflow-hidden"
         >
+          {/* Mode Tabs (Only when not verification step and not onboarding) */}
+          {!isOtpSent && !isOnboarding && (
+            <div className="flex border border-white/10 mb-6 bg-slate-900/40 p-1 rounded-none">
+              <button
+                type="button"
+                onClick={() => setAuthMode('live')}
+                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer rounded-none ${
+                  authMode === 'live'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                🔒 Live SMS OTP
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('bypass')}
+                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer rounded-none ${
+                  authMode === 'bypass'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                ⚡ Sandbox Bypass
+              </button>
+            </div>
+          )}
+
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 rounded-xl border border-neon-red/30 bg-neon-red/10 text-white text-xs font-semibold flex flex-col gap-2.5 text-left"
+              className="mb-6 p-4 rounded-none border border-neon-red/30 bg-neon-red/10 text-white text-xs font-semibold flex flex-col gap-2.5 text-left"
             >
               <div className="flex items-start gap-2.5">
                 <AlertCircle size={16} className="text-neon-red flex-shrink-0 mt-0.5" />
                 <span className="flex-1 leading-relaxed text-slate-200">{error}</span>
               </div>
-              {error.includes("disabled") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError('')
-                    const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
-                    setGeneratedOtp(mockOtp)
-                    confirmationResultRef.current = null
-                    setIsOtpSent(true)
-                    setTimer(60)
-                    setLoading(false)
-                  }}
-                  className="mt-1 text-xs text-neon-blue hover:text-neon-purple hover:underline font-extrabold text-left bg-transparent border-none p-0 cursor-pointer w-fit h-fit transition-colors"
-                >
-                  👉 Click here to activate Clinical Bypass Mode and log in instantly.
-                </button>
-              )}
             </motion.div>
           )}
 
@@ -395,7 +422,7 @@ export default function Auth() {
                     placeholder="e.g. Rajesh Kumar"
                     value={onboardName}
                     onChange={(e) => setOnboardName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
+                    className="w-full px-4 py-3 rounded-none text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                   />
                 </div>
 
@@ -409,7 +436,7 @@ export default function Auth() {
                     placeholder="e.g. rajesh@gmail.com"
                     value={onboardEmail}
                     onChange={(e) => setOnboardEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
+                    className="w-full px-4 py-3 rounded-none text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                   />
                 </div>
 
@@ -424,12 +451,12 @@ export default function Auth() {
                       placeholder="e.g. New Delhi, Delhi or coordinates"
                       value={onboardLocation}
                       onChange={(e) => setOnboardLocation(e.target.value)}
-                      className="flex-1 px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
+                      className="flex-1 px-4 py-3 rounded-none text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                     />
                     <button
                       type="button"
                       onClick={handleAutoDetectLocation}
-                      className="px-4 rounded-xl border border-neon-purple text-neon-purple hover:bg-neon-purple/10 text-xs font-bold cursor-pointer transition-all flex items-center justify-center bg-slate-900/40"
+                      className="px-4 rounded-none border border-neon-purple text-neon-purple hover:bg-neon-purple/10 text-xs font-bold cursor-pointer transition-all flex items-center justify-center bg-slate-900/40"
                     >
                       Auto-GPS
                     </button>
@@ -447,7 +474,7 @@ export default function Auth() {
                     placeholder="e.g. +91 99999 88888"
                     value={onboardEmergencyNumber}
                     onChange={(e) => setOnboardEmergencyNumber(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-neon-red/30 focus:border-neon-red! text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-neon-red transition-all"
+                    className="w-full px-4 py-3 rounded-none text-sm bg-slate-900/60 border border-neon-red/30 focus:border-neon-red! text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-neon-red transition-all"
                   />
                 </div>
 
@@ -462,7 +489,7 @@ export default function Auth() {
                     placeholder="e.g. guardian@gmail.com"
                     value={onboardEmergencyEmail}
                     onChange={(e) => setOnboardEmergencyEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-neon-red/30 focus:border-neon-red! text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-neon-red transition-all"
+                    className="w-full px-4 py-3 rounded-none text-sm bg-slate-900/60 border border-neon-red/30 focus:border-neon-red! text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-neon-red transition-all"
                   />
                 </div>
 
@@ -471,7 +498,7 @@ export default function Auth() {
                   whileTap={{ scale: 0.99 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-blue to-neon-purple shadow-[0_4px_20px_rgba(147,51,234,0.3)] hover:brightness-110 mt-6"
+                  className="w-full h-[48px] rounded-none font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-blue to-neon-purple shadow-[0_4px_20px_rgba(147,51,234,0.3)] hover:brightness-110 mt-6"
                 >
                   {loading ? (
                     <span>REGISTERING IDENTITY...</span>
@@ -496,15 +523,19 @@ export default function Auth() {
               >
                 <div className="border-b border-white/10 pb-4 mb-5">
                   <h2 className="text-lg font-black font-heading text-neon-blue uppercase tracking-widest">
-                    Secure Patient Access
+                    {authMode === 'live' ? 'Live Patient Verification' : 'Sandbox Simulated Access'}
                   </h2>
                   <p className="text-[10px] text-slate-400 mt-1 block leading-normal font-semibold uppercase tracking-wider">
-                    Login or register using India's national medical verification network.
+                    {authMode === 'live' 
+                      ? 'Firebase OTP dispatch to your direct cellular phone'
+                      : 'Mock clinical bypass sandbox validation engine'}
                   </p>
                 </div>
 
                 <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                  Verify your Identity using secure One-Time Passcode. Enter mobile phone details below:
+                  {authMode === 'live'
+                    ? 'Enter your mobile phone number below to receive a secure, live 6-digit verification code sent via SMS.'
+                    : 'Verify your identity instantly using our automated bypass module. No external carrier queue required.'}
                 </p>
 
                 <div className="space-y-2.5">
@@ -517,7 +548,7 @@ export default function Auth() {
                       placeholder="e.g. 98765 43210 (without country code)"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3.5 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-none text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                     />
                   </div>
                   <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest">
@@ -525,21 +556,21 @@ export default function Auth() {
                   </p>
                 </div>
 
-                {/* Invisible reCAPTCHA anchor — hidden from UI */}
-                <div id="recaptcha-anchor"></div>
+                {/* Invisible reCAPTCHA container */}
+                <div id="recaptcha-container" className="hidden"></div>
 
                 <motion.button
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-blue to-[#0e63a1] shadow-[0_4px_20px_rgba(59,130,246,0.3)] hover:brightness-110 mt-2"
+                  className="w-full h-[48px] rounded-none font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-blue to-[#0e63a1] shadow-[0_4px_20px_rgba(59,130,246,0.3)] hover:brightness-110 mt-2"
                 >
                   {loading ? (
                     <span>DISPATCHING OTP CODE...</span>
                   ) : (
                     <>
-                      <span>SEND SECURITY OTP</span>
+                      <span>{authMode === 'live' ? 'DISPATCH LIVE SMS OTP' : 'GENERATE SANDBOX OTP'}</span>
                       <ArrowRight size={14} />
                     </>
                   )}
@@ -582,14 +613,14 @@ export default function Auth() {
 
                 {/* Simulated Bypass OTP notification */}
                 {generatedOtp && (
-                  <div className="bg-neon-blue/10 border border-neon-blue/20 rounded-2xl p-4 text-left flex items-start gap-3 my-2 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                  <div className="bg-neon-blue/10 border border-neon-blue/20 rounded-none p-4 text-left flex items-start gap-3 my-2 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
                     <Sparkles size={16} className="text-neon-purple mt-0.5 flex-shrink-0 animate-bounce" />
                     <div className="space-y-1">
                       <span className="text-[10px] font-black text-neon-blue uppercase tracking-wider block">
                         Clinical Test Passcode Active
                       </span>
                       <span className="text-xs text-white font-bold block mt-1">
-                        Your Bypass Code: <span className="text-neon-purple text-sm bg-neon-purple/20 px-2 py-0.5 rounded-md font-mono border border-neon-purple/30 font-black tracking-wider">{generatedOtp}</span>
+                        Your Bypass Code: <span className="text-neon-purple text-sm bg-neon-purple/20 px-2 py-0.5 rounded-none font-mono border border-neon-purple/30 font-black tracking-wider">{generatedOtp}</span>
                       </span>
                       <span className="text-[9px] text-slate-400 block leading-normal mt-1.5 font-semibold">
                         Use this code below to instantly bypass the Firebase SMS queue and access the portal.
@@ -610,7 +641,7 @@ export default function Auth() {
                       placeholder="e.g. 123456"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                      className="w-full pl-12 pr-4 py-3.5 rounded-xl text-center text-sm font-black bg-slate-900/60 border border-white/10 text-white focus:outline-none focus:border-neon-purple focus:ring-1 focus:ring-neon-purple tracking-[0.3em] transition-all"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-none text-center text-sm font-black bg-slate-900/60 border border-white/10 text-white focus:outline-none focus:border-neon-purple focus:ring-1 focus:ring-neon-purple tracking-[0.3em] transition-all"
                     />
                   </div>
                 </div>
@@ -620,7 +651,7 @@ export default function Auth() {
                   whileTap={{ scale: 0.99 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-purple to-neon-blue shadow-[0_4px_20px_rgba(147,51,234,0.3)] hover:brightness-110 mt-2"
+                  className="w-full h-[48px] rounded-none font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-purple to-neon-blue shadow-[0_4px_20px_rgba(147,51,234,0.3)] hover:brightness-110 mt-2"
                 >
                   {loading ? (
                     <span>VERIFYING CODE...</span>
@@ -654,7 +685,7 @@ export default function Auth() {
             <>
               <div className="relative flex items-center justify-center my-8">
                 <div className="absolute inset-0 w-full h-[1px] bg-white/10" />
-                <span className="relative z-10 px-4 bg-slate-950/80 rounded-full py-0.5 border border-white/5 text-[9px] uppercase font-black tracking-widest text-slate-400">
+                <span className="relative z-10 px-4 bg-slate-950/80 rounded-none py-0.5 border border-white/5 text-[9px] uppercase font-black tracking-widest text-slate-400">
                   OR IDENTITY BRIDGE
                 </span>
               </div>
@@ -665,7 +696,7 @@ export default function Auth() {
                 whileTap={{ scale: 0.99 }}
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full h-[46px] rounded-xl bg-slate-900/50 border border-white/10 hover:bg-slate-900/85 text-xs text-slate-300 font-extrabold flex items-center justify-center gap-2.5 cursor-pointer transition-all shadow-sm"
+                className="w-full h-[46px] rounded-none bg-slate-900/50 border border-white/10 hover:bg-slate-900/85 text-xs text-slate-300 font-extrabold flex items-center justify-center gap-2.5 cursor-pointer transition-all shadow-sm"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" className="mr-1">
                   <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.5a5.99 5.99 0 0 1 5.99-6.013c1.49 0 2.854.55 3.907 1.455l3.057-3.057C19.102 3.1 16.697 2 13.99 2 8.163 2 3.5 6.663 3.5 12.5S8.163 23 13.99 23c5.383 0 9.877-3.85 9.877-9.5 0-.712-.083-1.4-.217-2.073l-11.41-.142z"/>
