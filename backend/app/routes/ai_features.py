@@ -17,8 +17,8 @@ load_dotenv()
 # Hugging Face Inference configuration - default to empty to allow free unauthenticated public queries
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 
-async def query_huggingface_model(prompt: str, model_name: str = "mistralai/Mistral-7B-Instruct-v0.2") -> str:
-    """Helper function to query Hugging Face models dynamically with multi-format parsing."""
+async def query_huggingface_model(prompt: str, model_name: str = "google/gemma-4-E4B-it") -> str:
+    """Helper function to query Hugging Face models dynamically with multi-format parsing and model cascade fallbacks."""
     token = os.getenv("HF_TOKEN", "").strip()
     headers = {}
     
@@ -26,47 +26,54 @@ async def query_huggingface_model(prompt: str, model_name: str = "mistralai/Mist
     if token and not token.startswith("hf_JdGhN"):
         headers["Authorization"] = f"Bearer {token}"
         
-    url = f"https://api-inference.huggingface.co/models/{model_name}"
-    payload = {
-        "inputs": prompt,
-        "parameters": {"max_new_tokens": 250, "temperature": 0.7}
-    }
-    
+    models_to_try = [model_name]
+    fallbacks = ["google/gemma-2-9b-it", "ruslanmv/Medical-Llama3-8B", "mistralai/Mistral-7B-Instruct-v0.2"]
+    for f in fallbacks:
+        if f not in models_to_try:
+            models_to_try.append(f)
+            
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, headers=headers, json=payload, timeout=15.0)
-            if response.status_code == 200:
-                result = response.json()
+        for current_model in models_to_try:
+            url = f"https://api-inference.huggingface.co/models/{current_model}"
+            payload = {
+                "inputs": prompt,
+                "parameters": {"max_new_tokens": 250, "temperature": 0.7}
+            }
+            
+            try:
+                print(f"Backend querying Hugging Face model: {current_model}...")
+                response = await client.post(url, headers=headers, json=payload, timeout=12.0)
+                if response.status_code == 200:
+                    result = response.json()
+                    
+                    # Case 1: List response
+                    if isinstance(result, list) and len(result) > 0:
+                        item = result[0]
+                        if isinstance(item, dict):
+                            if "generated_text" in item:
+                                return item.get("generated_text", "")
+                            if "summary_text" in item:
+                                return item.get("summary_text", "")
+                            if "label" in item:
+                                return ", ".join([f"{x.get('label')}: {x.get('score', 0):.1%}" for x in result if isinstance(x, dict)])
+                        elif isinstance(item, str):
+                            return item
+                            
+                    # Case 2: Dictionary response
+                    elif isinstance(result, dict):
+                        if "generated_text" in result:
+                            return result.get("generated_text", "")
+                        if "summary_text" in result:
+                            return result.get("summary_text", "")
+                        if "text" in result:
+                            return result.get("text", "")
+                else:
+                    print(f"HF model {current_model} returned status {response.status_code}. Trying next cascade...")
+            except Exception as e:
+                print(f"HF Query Exception for {current_model}:", e)
                 
-                # Case 1: List response
-                if isinstance(result, list) and len(result) > 0:
-                    item = result[0]
-                    if isinstance(item, dict):
-                        if "generated_text" in item:
-                            return item.get("generated_text", "")
-                        if "summary_text" in item:
-                            return item.get("summary_text", "")
-                        if "label" in item:
-                            # Format classification list beautifully
-                            return ", ".join([f"{x.get('label')}: {x.get('score', 0):.1%}" for x in result if isinstance(x, dict)])
-                    elif isinstance(item, str):
-                        return item
-                        
-                # Case 2: Dictionary response
-                elif isinstance(result, dict):
-                    if "generated_text" in result:
-                        return result.get("generated_text", "")
-                    if "summary_text" in result:
-                        return result.get("summary_text", "")
-                    if "text" in result:
-                        return result.get("text", "")
-                return ""
-            else:
-                print(f"HF Inference API returned status {response.status_code}: {response.text}")
-                return ""
-        except Exception as e:
-            print("HF Query Exception:", e)
-            return ""
+    return ""
+
 
 @router.post("/predict-disease")
 async def predict_disease(request: SymptomRequest, user: dict = Depends(get_current_user)):
