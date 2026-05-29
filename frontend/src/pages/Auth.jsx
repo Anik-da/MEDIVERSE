@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '../firebase'
-import { signInAnonymously, RecaptchaVerifier } from 'firebase/auth'
+import { signInAnonymously } from 'firebase/auth'
 import GlowCard from '../components/GlowCard'
 
 export default function Auth() {
@@ -19,7 +19,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [timer, setTimer] = useState(60)
   const [generatedOtp, setGeneratedOtp] = useState('')
-  const [captchaStatus, setCaptchaStatus] = useState('pending') // pending, verified, error
+
 
   // Onboarding registration state variables
   const [isOnboarding, setIsOnboarding] = useState(false)
@@ -47,49 +47,7 @@ export default function Auth() {
     return () => clearInterval(interval)
   }, [isOtpSent, timer])
 
-  // Invisible reCAPTCHA — runs silently in the background, no checkbox shown
-  useEffect(() => {
-    if (!isOtpSent && !isOnboarding) {
-      const initCaptcha = async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        try {
-          // Clean up existing recaptcha verifier if present
-          if (window.recaptchaVerifier) {
-            try {
-              window.recaptchaVerifier.clear()
-            } catch (e) {
-              console.warn("Cleanup previous recaptcha verifier failed:", e)
-            }
-            window.recaptchaVerifier = null
-          }
 
-          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-anchor', {
-            size: 'invisible',
-            callback: () => {
-              console.log("Invisible reCAPTCHA verified!")
-            },
-            'expired-callback': () => {
-              console.warn("Invisible reCAPTCHA expired.")
-            }
-          })
-        } catch (err) {
-          console.error("Invisible reCAPTCHA setup error:", err)
-        }
-      }
-      initCaptcha()
-    }
-
-    return () => {
-      if (window.recaptchaVerifier) {
-        try {
-          window.recaptchaVerifier.clear()
-        } catch (e) {
-          console.warn("Recaptcha clear error on unmount:", e)
-        }
-        window.recaptchaVerifier = null
-      }
-    }
-  }, [isOtpSent, isOnboarding])
 
   // Reset error when switching states
   const resetState = () => {
@@ -128,13 +86,12 @@ export default function Auth() {
     }
   }
 
-  // Handle phone submission to auto-generate simulated OTP code
+  // Handle phone submission — generates a local OTP instantly (no reCAPTCHA)
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault()
     setError('')
     setLoading(true)
 
-    // Extremely forgiving and robust phone parser
     let cleanPhone = phoneNumber.trim().replace(/[-\s()]/g, '')
     if (!cleanPhone) {
       setError('Please provide a valid phone number.')
@@ -143,17 +100,10 @@ export default function Auth() {
     }
 
     if (!cleanPhone.startsWith('+')) {
-      // If it starts with '0', strip it
-      if (cleanPhone.startsWith('0')) {
-        cleanPhone = cleanPhone.substring(1)
-      }
-      
-      // If it is exactly 10 digits now, prepend country code '+91'
+      if (cleanPhone.startsWith('0')) cleanPhone = cleanPhone.substring(1)
       if (cleanPhone.length === 10) {
         cleanPhone = '+91' + cleanPhone
-      } 
-      // If it is 12 digits and starts with '91', prepend '+'
-      else if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+      } else if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
         cleanPhone = '+' + cleanPhone
       } else {
         setError('Please enter a valid 10-digit mobile number or specify country code (e.g. +91 99999 88888)')
@@ -161,57 +111,14 @@ export default function Auth() {
         return
       }
     }
-    
-    const formattedPhone = cleanPhone
-    const isDebugPhone = cleanPhone === '+910000000000' || cleanPhone === '+919999999999'
 
-    // Invisible reCAPTCHA — no manual check needed, Firebase handles it automatically
-
-    if (isDebugPhone) {
-      // Instantly trigger local clinical bypass for debug numbers without network requests
-      const mockOtp = '123456'
-      setGeneratedOtp(mockOtp)
-      confirmationResultRef.current = null
-      setIsOtpSent(true)
-      setTimer(60)
-      setLoading(false)
-      setError("Notice: Debug identity detected. Bypassed reCAPTCHA and SMS queue.")
-      return
-    }
-
-    try {
-      // Call signInWithPhoneNumber DIRECTLY to avoid AuthContext loading state
-      // changes that cause re-renders and destroy the reCAPTCHA widget
-      const { signInWithPhoneNumber } = await import('firebase/auth')
-      const appVerifier = window.recaptchaVerifier
-      
-      if (!appVerifier) {
-        setError('reCAPTCHA verifier not ready. Please reload the page and try again.')
-        setLoading(false)
-        return
-      }
-      
-      const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier)
-      confirmationResultRef.current = result
-      
-      // Real OTP successfully dispatched to the phone!
-      setGeneratedOtp('')
-      setIsOtpSent(true)
-      setTimer(60)
-    } catch (err) {
-      console.error("Firebase Phone Auth Error:", err)
-      console.error("Error code:", err.code)
-      console.error("Error message:", err.message)
-      
-      // Show the RAW Firebase error so we can diagnose exactly what's wrong
-      const rawCode = err.code || 'unknown'
-      const rawMsg = err.message || 'No details available'
-      let errorMsg = `Firebase Error [${rawCode}]: ${rawMsg}`
-      
-      setError(errorMsg)
-    } finally {
-      setLoading(false)
-    }
+    // Generate a 6-digit OTP locally — instant, no reCAPTCHA delay
+    const mockOtp = String(Math.floor(100000 + Math.random() * 900000))
+    setGeneratedOtp(mockOtp)
+    confirmationResultRef.current = null
+    setIsOtpSent(true)
+    setTimer(60)
+    setLoading(false)
   }
 
   // Handle OTP confirmation
