@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       initial={false}
       animate={{ width: isOpen ? 300 : 84 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="fixed top-0 left-0 h-screen z-40 flex flex-col border-r border-slate-200/90 bg-gradient-to-b from-slate-50 to-white"
+      className="fixed top-0 left-0 h-screen z-40 flex flex-col border-r border-slate-200/90 bg-gradient-to-b from-slate-50 to-white select-none"
     >
       {/* Brand Header */}
       <div className="flex items-center gap-4 px-6 h-24 border-b border-slate-200/90">
@@ -83,9 +83,9 @@ export default function Sidebar({ isOpen, onToggle }) {
               whileTap={{ scale: 0.99 }}
               className={`
                 w-full flex items-center gap-4 rounded-none transition-all duration-150 cursor-pointer relative group
-                ${isOpen ? 'px-6 py-4' : 'px-0 py-4 justify-center'}
+                ${isOpen ? 'px-6 py-3.5' : 'px-0 py-3.5 justify-center'}
                 ${isActive
-                  ? 'text-white font-bold'
+                  ? 'text-white'
                   : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
                 }
               `}
@@ -104,16 +104,28 @@ export default function Sidebar({ isOpen, onToggle }) {
               )}
 
               <div className="relative z-10 flex items-center gap-4">
-                <Icon
-                  size={22}
-                  className="flex-shrink-0"
-                  style={isActive ? { color: '#ffffff' } : { color: item.color }}
-                />
+                {/* Beautiful high-contrast square badge wrapper */}
+                <div
+                  className="w-10 h-10 flex items-center justify-center rounded-none flex-shrink-0 transition-all"
+                  style={{
+                    backgroundColor: isActive ? 'rgba(255,255,255,0.22)' : `${item.color}10`,
+                    border: `1.5px solid ${isActive ? 'rgba(255,255,255,0.5)' : `${item.color}25`}`
+                  }}
+                >
+                  <Icon
+                    size={18}
+                    className="flex-shrink-0"
+                    style={isActive ? { color: '#ffffff' } : { color: item.color }}
+                  />
+                </div>
+
                 {isOpen && (
                   <motion.span
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-[15px] font-semibold whitespace-nowrap"
+                    className={`text-[15px] whitespace-nowrap tracking-wide transition-all ${
+                      isActive ? 'font-black' : 'font-bold'
+                    }`}
                   >
                     {item.label}
                   </motion.span>
@@ -133,12 +145,16 @@ export default function Sidebar({ isOpen, onToggle }) {
           }}
           className={`
             w-full flex items-center gap-4 rounded-none hover:bg-red-50 text-slate-500 hover:text-red-600 transition-all cursor-pointer
-            ${isOpen ? 'px-6 py-4' : 'px-0 py-4 justify-center'}
+            ${isOpen ? 'px-6 py-3.5' : 'px-0 py-3.5 justify-center'}
           `}
         >
-          <LogOut size={22} className="flex-shrink-0 text-red-500" />
+          <div
+            className="w-10 h-10 flex items-center justify-center rounded-none flex-shrink-0 transition-all bg-red-50 border border-red-200/60"
+          >
+            <LogOut size={18} className="flex-shrink-0 text-red-500" />
+          </div>
           {isOpen && (
-            <span className="text-[15px] font-bold whitespace-nowrap text-red-600">Log Out</span>
+            <span className="text-[15px] font-bold whitespace-nowrap text-red-600 uppercase tracking-wider">Log Out</span>
           )}
         </button>
 
