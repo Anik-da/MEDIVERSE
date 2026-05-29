@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Bell, Search, Menu, User, ShieldAlert } from 'lucide-react'
+import { Bell, Search, Menu, User, ShieldAlert, Globe } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
@@ -49,7 +49,10 @@ export default function Navbar({ onMenuToggle }) {
       {/* Right: Notifications, Emergency SOS, Profile Avatar */}
       <div className="flex items-center gap-4">
         {/* Google Translate target */}
-        <div id="google_translate_element" className="google-translate-dropdown text-xs mr-2 hidden lg:block"></div>
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-3 py-2 rounded-none h-11 select-none shadow-sm">
+          <Globe size={15} className="text-blue-600 animate-pulse flex-shrink-0" />
+          <div id="google_translate_element" className="google-translate-dropdown text-xs font-semibold text-slate-700"></div>
+        </div>
 
         {/* Notifications */}
         <button className="relative p-3 rounded-none hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-200">
