@@ -54,12 +54,30 @@ export default function HospitalFinder() {
     handleLocate()
   }, [])
 
-  // Build the Google Maps embed iframe URL (requires no API key and has 100% compatibility)
+  // Build the Google Maps embed iframe URL (requires no API key, handles live GPS sync & hospital select)
   const getMapUrl = () => {
     if (!coordinates) return ''
-    const { latitude, longitude } = coordinates
-    return `https://maps.google.com/maps?q=${latitude},${longitude}&z=14&output=embed`
+    let lat = coordinates.latitude
+    let lng = coordinates.longitude
+
+    if (selectedHospital) {
+      const hospitalIdx = mockHospitals.findIndex(h => h.name === selectedHospital.name)
+      const offsets = [
+        { lat: 0.006, lng: 0.005 },
+        { lat: -0.005, lng: -0.008 },
+        { lat: 0.007, lng: -0.006 },
+        { lat: -0.004, lng: 0.008 }
+      ]
+      const offset = offsets[hospitalIdx] || { lat: 0, lng: 0 }
+      lat += offset.lat
+      lng += offset.lng
+      
+      return `https://maps.google.com/maps?q=${lat},${lng}(${encodeURIComponent(selectedHospital.name)})&z=15&output=embed`
+    }
+
+    return `https://maps.google.com/maps?q=${lat},${lng}(Your%20Location)&z=14&output=embed`
   }
+
 
 
   return (
