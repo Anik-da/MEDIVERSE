@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from '../firebase'
-import { signInAnonymously } from 'firebase/auth'
+import { signInAnonymously, RecaptchaVerifier } from 'firebase/auth'
 import GlowCard from '../components/GlowCard'
 
 export default function Auth() {
@@ -19,6 +19,7 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [timer, setTimer] = useState(60)
   const [generatedOtp, setGeneratedOtp] = useState('')
+  const [captchaStatus, setCaptchaStatus] = useState('pending') // pending, verified, error
 
   // Onboarding registration state variables
   const [isOnboarding, setIsOnboarding] = useState(false)
@@ -32,7 +33,6 @@ export default function Auth() {
   const { initRecaptcha, sendOtp, verifyOtp, loginGoogle, refreshProfile, setSimulatedUser } = useAuth()
   const navigate = useNavigate()
   const confirmationResultRef = useRef(null)
-  const recaptchaVerifierRef = useRef(null)
 
   // Countdown timer for resending OTP
   useEffect(() => {
@@ -47,6 +47,50 @@ export default function Auth() {
     return () => clearInterval(interval)
   }, [isOtpSent, timer])
 
+  // Invisible reCAPTCHA — runs silently in the background, no checkbox shown
+  useEffect(() => {
+    if (!isOtpSent && !isOnboarding) {
+      const initCaptcha = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        try {
+          // Clean up existing recaptcha verifier if present
+          if (window.recaptchaVerifier) {
+            try {
+              window.recaptchaVerifier.clear()
+            } catch (e) {
+              console.warn("Cleanup previous recaptcha verifier failed:", e)
+            }
+            window.recaptchaVerifier = null
+          }
+
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-anchor', {
+            size: 'invisible',
+            callback: () => {
+              console.log("Invisible reCAPTCHA verified!")
+            },
+            'expired-callback': () => {
+              console.warn("Invisible reCAPTCHA expired.")
+            }
+          })
+        } catch (err) {
+          console.error("Invisible reCAPTCHA setup error:", err)
+        }
+      }
+      initCaptcha()
+    }
+
+    return () => {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear()
+        } catch (e) {
+          console.warn("Recaptcha clear error on unmount:", e)
+        }
+        window.recaptchaVerifier = null
+      }
+    }
+  }, [isOtpSent, isOnboarding])
+
   // Reset error when switching states
   const resetState = () => {
     setError('')
@@ -56,10 +100,15 @@ export default function Auth() {
   // Check if user has complete profile in Firestore
   const checkUserProfileAndProceed = async (user) => {
     try {
-      const docRef = doc(db, 'users', user.uid)
-      const docSnap = await getDoc(docRef)
+      let docSnap = null
+      try {
+        const docRef = doc(db, 'users', user.uid)
+        docSnap = await getDoc(docRef)
+      } catch (firestoreErr) {
+        console.warn("Firestore database fetch rejected or not configured. Using local synchronization:", firestoreErr)
+      }
       
-      if (docSnap.exists()) {
+      if (docSnap && docSnap.exists()) {
         const data = docSnap.data()
         // If they already filled out their name and emergency contacts, they are fully registered!
         if (data.name && data.emergencyNumber && data.emergencyEmail) {
@@ -73,7 +122,9 @@ export default function Auth() {
       setIsOnboarding(true)
     } catch (err) {
       console.error("Profile check error:", err)
-      setError("Successfully signed in, but failed to synchronize your medical records.")
+      // Fallback: Proceed even if local session state synchronization has general errors
+      setTempUser(user)
+      setIsOnboarding(true)
     }
   }
 
@@ -112,32 +163,52 @@ export default function Auth() {
     }
     
     const formattedPhone = cleanPhone
+    const isDebugPhone = cleanPhone === '+910000000000' || cleanPhone === '+919999999999'
+
+    // Invisible reCAPTCHA — no manual check needed, Firebase handles it automatically
+
+    if (isDebugPhone) {
+      // Instantly trigger local clinical bypass for debug numbers without network requests
+      const mockOtp = '123456'
+      setGeneratedOtp(mockOtp)
+      confirmationResultRef.current = null
+      setIsOtpSent(true)
+      setTimer(60)
+      setLoading(false)
+      setError("Notice: Debug identity detected. Bypassed reCAPTCHA and SMS queue.")
+      return
+    }
 
     try {
-      // 1. Initialize invisible Recaptcha verifier
-      if (!recaptchaVerifierRef.current) {
-        recaptchaVerifierRef.current = initRecaptcha('recaptcha-container')
+      // Call signInWithPhoneNumber DIRECTLY to avoid AuthContext loading state
+      // changes that cause re-renders and destroy the reCAPTCHA widget
+      const { signInWithPhoneNumber } = await import('firebase/auth')
+      const appVerifier = window.recaptchaVerifier
+      
+      if (!appVerifier) {
+        setError('reCAPTCHA verifier not ready. Please reload the page and try again.')
+        setLoading(false)
+        return
       }
       
-      // 2. Attempt real Firebase Phone OTP transmission
-      const result = await sendOtp(formattedPhone, recaptchaVerifierRef.current)
+      const result = await signInWithPhoneNumber(auth, formattedPhone, appVerifier)
       confirmationResultRef.current = result
       
-      // Real OTP successfully dispatched!
+      // Real OTP successfully dispatched to the phone!
       setGeneratedOtp('')
       setIsOtpSent(true)
       setTimer(60)
     } catch (err) {
-      console.warn("Real Firebase Phone Auth failed, using direct simulated local bypass:", err)
-      // Fallback: Generate a 6-digit clinical security passcode locally
-      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
-      setGeneratedOtp(mockOtp)
-      confirmationResultRef.current = null // Clear any real verification session
-      setIsOtpSent(true)
-      setTimer(60)
+      console.error("Firebase Phone Auth Error:", err)
+      console.error("Error code:", err.code)
+      console.error("Error message:", err.message)
       
-      // Give a clear, helpful warning in the UI
-      setError("Notice: Firebase SMS gateway is offline or not configured. Deployed local clinical bypass instead.")
+      // Show the RAW Firebase error so we can diagnose exactly what's wrong
+      const rawCode = err.code || 'unknown'
+      const rawMsg = err.message || 'No details available'
+      let errorMsg = `Firebase Error [${rawCode}]: ${rawMsg}`
+      
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -159,12 +230,35 @@ export default function Auth() {
       let user = null
       
       if (confirmationResultRef.current) {
-        // A real Firebase Phone verification session is active!
+        // Real Firebase Phone verification — call confirm() directly
         try {
-          user = await verifyOtp(confirmationResultRef.current, otpCode)
+          const result = await confirmationResultRef.current.confirm(otpCode)
+          user = result.user
+          
+          // Create/check Firestore user profile
+          try {
+            const userDocRef = doc(db, 'users', user.uid)
+            const userDoc = await getDoc(userDocRef)
+            if (!userDoc.exists()) {
+              await setDoc(userDocRef, {
+                name: `User ${user.phoneNumber?.slice(-4) || '0000'}`,
+                phone: user.phoneNumber || phoneNumber,
+                email: '',
+                createdAt: serverTimestamp(),
+                healthScore: 80,
+                profile: {},
+              })
+            }
+          } catch (profileErr) {
+            console.warn("Firestore profile sync skipped:", profileErr)
+          }
         } catch (verifyErr) {
-          console.error("Real Firebase OTP verification failed:", verifyErr)
-          throw new Error("Incorrect passcode or expired session. Please retry or change number.")
+          console.error("OTP verification failed:", verifyErr)
+          const rawCode = verifyErr.code || 'unknown'
+          const rawMsg = verifyErr.message || 'Verification failed'
+          setError(`Verification Error [${rawCode}]: ${rawMsg}`)
+          setLoading(false)
+          return
         }
       } else {
         // Fallback: local simulated validation checks
@@ -293,35 +387,36 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-cyber-black relative overflow-hidden px-4 py-8">
-      {/* Invisible Recaptcha Element */}
-      <div id="recaptcha-container" className="hidden"></div>
-
       {/* Cyber grid background */}
-      <div className="cyber-grid" />
+      <div className="cyber-grid absolute inset-0 opacity-40 pointer-events-none" />
 
-      {/* Floating radial glow meshes */}
-      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-neon-blue/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-neon-purple/5 blur-[120px] pointer-events-none" />
+      {/* Floating radial glow meshes for Glassmorphism backdrop */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full bg-neon-blue/10 blur-[130px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-neon-purple/10 blur-[130px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
 
       <div className="w-full max-w-[480px] relative z-10">
         {/* MediVerse AI brand header */}
-        <div className="flex flex-col items-center mb-6">
+        <div className="flex flex-col items-center mb-8">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            className="relative"
           >
-            <img src="/logo.png" alt="MediVerse Logo" className="w-12 h-12 object-contain rounded-xl mb-3 shadow-[0_0_20px_rgba(15,76,129,0.06)] border border-[#E2E8F0]" />
+            <div className="absolute inset-0 bg-neon-blue/30 rounded-2xl blur-md animate-pulse pointer-events-none" />
+            <img src="/logo.png" alt="MediVerse Logo" className="relative w-14 h-14 object-contain rounded-2xl mb-4 border border-white/20 shadow-[0_0_30px_rgba(59,130,246,0.3)] bg-slate-900/80 p-1" />
           </motion.div>
+          
           <motion.h1
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="text-xl font-extrabold font-heading text-neon-blue tracking-wide"
+            className="text-2xl font-black font-heading text-white tracking-widest uppercase bg-clip-text bg-gradient-to-r from-white via-neon-blue to-neon-purple"
           >
             MEDIVERSE AI
           </motion.h1>
-          <p className="text-[9px] text-text-secondary uppercase tracking-[0.2em] mt-1 font-bold flex items-center gap-1">
-            <Sparkles size={9} className="text-neon-blue animate-pulse" />
+          
+          <p className="text-[10px] text-neon-blue uppercase tracking-[0.25em] mt-2 font-black flex items-center gap-1.5 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+            <Sparkles size={11} className="text-neon-purple animate-spin" style={{ animationDuration: '4s' }} />
             SECURE NATIONAL PATIENT IDENTITY
           </p>
         </div>
@@ -330,16 +425,35 @@ export default function Auth() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
-          className="bg-white border border-[#E2E8F0] rounded-3xl shadow-[0_20px_50px_rgba(15,76,129,0.06)] p-8 md:p-10"
+          className="relative bg-slate-950/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_0_50px_rgba(15,76,129,0.15)] p-8 md:p-10 overflow-hidden"
         >
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 rounded-xl border border-neon-red/20 bg-neon-red/5 text-neon-red text-xs font-semibold flex items-center gap-2"
+              className="mb-6 p-4 rounded-xl border border-neon-red/30 bg-neon-red/10 text-white text-xs font-semibold flex flex-col gap-2.5 text-left"
             >
-              <AlertCircle size={15} className="flex-shrink-0" />
-              <span>{error}</span>
+              <div className="flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-neon-red flex-shrink-0 mt-0.5" />
+                <span className="flex-1 leading-relaxed text-slate-200">{error}</span>
+              </div>
+              {error.includes("disabled") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('')
+                    const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
+                    setGeneratedOtp(mockOtp)
+                    confirmationResultRef.current = null
+                    setIsOtpSent(true)
+                    setTimer(60)
+                    setLoading(false)
+                  }}
+                  className="mt-1 text-xs text-neon-blue hover:text-neon-purple hover:underline font-extrabold text-left bg-transparent border-none p-0 cursor-pointer w-fit h-fit transition-colors"
+                >
+                  👉 Click here to activate Clinical Bypass Mode and log in instantly.
+                </button>
+              )}
             </motion.div>
           )}
 
@@ -354,19 +468,19 @@ export default function Auth() {
                 onSubmit={handleCompleteOnboarding}
                 className="space-y-5 text-left"
               >
-                <div className="border-b border-[#F1F5F9] pb-4 mb-5">
-                  <h2 className="text-base font-extrabold font-heading text-neon-blue uppercase tracking-wider">
+                <div className="border-b border-white/10 pb-4 mb-5">
+                  <h2 className="text-lg font-black font-heading text-neon-blue uppercase tracking-widest">
                     Complete Clinical Profile
                   </h2>
-                  <p className="text-[10px] text-text-secondary mt-1 block leading-normal font-medium">
+                  <p className="text-[10px] text-slate-400 mt-1 block leading-normal font-semibold uppercase tracking-wider">
                     Register your vital medical emergency routing parameters before entry.
                   </p>
                 </div>
 
                 {/* Patient Name */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold tracking-wider text-text-secondary flex items-center gap-1.5">
-                    <User size={12} className="text-neon-blue" /> Full Name <span className="text-neon-red">*</span>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <User size={13} className="text-neon-blue" /> Full Name <span className="text-neon-red">*</span>
                   </label>
                   <input
                     type="text"
@@ -374,28 +488,28 @@ export default function Auth() {
                     placeholder="e.g. Rajesh Kumar"
                     value={onboardName}
                     onChange={(e) => setOnboardName(e.target.value)}
-                    className="w-full px-4 rounded-xl text-sm"
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                   />
                 </div>
 
                 {/* Patient Email */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold tracking-wider text-text-secondary flex items-center gap-1.5">
-                    <Mail size={12} className="text-neon-blue" /> Personal Email Address
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <Mail size={13} className="text-neon-blue" /> Personal Email Address
                   </label>
                   <input
                     type="email"
                     placeholder="e.g. rajesh@gmail.com"
                     value={onboardEmail}
                     onChange={(e) => setOnboardEmail(e.target.value)}
-                    className="w-full px-4 rounded-xl text-sm"
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                   />
                 </div>
 
                 {/* Primary Location */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase font-bold tracking-wider text-text-secondary flex items-center gap-1.5">
-                    <MapPin size={12} className="text-neon-blue" /> Patient Location / Coordinates
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-300 flex items-center gap-1.5">
+                    <MapPin size={13} className="text-neon-blue" /> Patient Location / Coordinates
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -403,12 +517,12 @@ export default function Auth() {
                       placeholder="e.g. New Delhi, Delhi or coordinates"
                       value={onboardLocation}
                       onChange={(e) => setOnboardLocation(e.target.value)}
-                      className="flex-1 px-4 rounded-xl text-sm"
+                      className="flex-1 px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                     />
                     <button
                       type="button"
                       onClick={handleAutoDetectLocation}
-                      className="px-4 h-[46px] rounded-xl border border-neon-purple text-neon-purple hover:bg-neon-purple/5 text-xs font-bold cursor-pointer transition-colors flex items-center justify-center"
+                      className="px-4 rounded-xl border border-neon-purple text-neon-purple hover:bg-neon-purple/10 text-xs font-bold cursor-pointer transition-all flex items-center justify-center bg-slate-900/40"
                     >
                       Auto-GPS
                     </button>
@@ -416,9 +530,9 @@ export default function Auth() {
                 </div>
 
                 {/* Emergency Phone */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-neon-red flex items-center gap-1.5 font-extrabold">
-                    <Phone size={12} /> Emergency Contact Phone <span className="text-neon-red">*</span>
+                    <Phone size={13} className="text-neon-red" /> Emergency Contact Phone <span className="text-neon-red">*</span>
                   </label>
                   <input
                     type="tel"
@@ -426,14 +540,14 @@ export default function Auth() {
                     placeholder="e.g. +91 99999 88888"
                     value={onboardEmergencyNumber}
                     onChange={(e) => setOnboardEmergencyNumber(e.target.value)}
-                    className="w-full px-4 rounded-xl text-sm border-neon-red/30 focus:border-neon-red!"
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-neon-red/30 focus:border-neon-red! text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-neon-red transition-all"
                   />
                 </div>
 
                 {/* Emergency Email */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-neon-red flex items-center gap-1.5 font-extrabold">
-                    <Mail size={12} /> Emergency Contact Email <span className="text-neon-red">*</span>
+                    <Mail size={13} className="text-neon-red" /> Emergency Contact Email <span className="text-neon-red">*</span>
                   </label>
                   <input
                     type="email"
@@ -441,7 +555,7 @@ export default function Auth() {
                     placeholder="e.g. guardian@gmail.com"
                     value={onboardEmergencyEmail}
                     onChange={(e) => setOnboardEmergencyEmail(e.target.value)}
-                    className="w-full px-4 rounded-xl text-sm border-neon-red/30 focus:border-neon-red!"
+                    className="w-full px-4 py-3 rounded-xl text-sm bg-slate-900/60 border border-neon-red/30 focus:border-neon-red! text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-neon-red transition-all"
                   />
                 </div>
 
@@ -450,7 +564,7 @@ export default function Auth() {
                   whileTap={{ scale: 0.99 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-neon-blue shadow-[0_4px_12px_rgba(15,76,129,0.2)] mt-6"
+                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-blue to-neon-purple shadow-[0_4px_20px_rgba(147,51,234,0.3)] hover:brightness-110 mt-6"
                 >
                   {loading ? (
                     <span>REGISTERING IDENTITY...</span>
@@ -473,43 +587,46 @@ export default function Auth() {
                 onSubmit={handleSendOtp}
                 className="space-y-6 text-left"
               >
-                <div className="border-b border-[#F1F5F9] pb-4 mb-5">
-                  <h2 className="text-lg font-extrabold font-heading text-neon-blue uppercase tracking-wider">
+                <div className="border-b border-white/10 pb-4 mb-5">
+                  <h2 className="text-lg font-black font-heading text-neon-blue uppercase tracking-widest">
                     Secure Patient Access
                   </h2>
-                  <p className="text-[10px] text-text-secondary mt-1 font-medium tracking-wide">
+                  <p className="text-[10px] text-slate-400 mt-1 block leading-normal font-semibold uppercase tracking-wider">
                     Login or register using India's national medical verification network.
                   </p>
                 </div>
 
-                <p className="text-xs text-text-secondary leading-relaxed">
+                <p className="text-xs text-slate-300 leading-relaxed font-medium">
                   Verify your Identity using secure One-Time Passcode. Enter mobile phone details below:
                 </p>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold tracking-wider text-text-secondary block">Mobile Phone Number</label>
+                <div className="space-y-2.5">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Mobile Phone Number</label>
                   <div className="relative flex items-center">
-                    <Phone size={15} className="absolute left-4 text-text-muted z-10" />
+                    <Phone size={15} className="absolute left-4 text-slate-500 z-10" />
                     <input
                       type="tel"
                       required
                       placeholder="e.g. 98765 43210 (without country code)"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl text-sm"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-xl text-sm bg-slate-900/60 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all"
                     />
                   </div>
-                  <p className="text-[9px] text-text-muted font-bold tracking-wide">
-                    System will automatically prefix country code +91 for India.
+                  <p className="text-[9px] text-slate-500 font-extrabold uppercase tracking-widest">
+                    ⚡ Country code +91 will be prefixed automatically.
                   </p>
                 </div>
+
+                {/* Invisible reCAPTCHA anchor — hidden from UI */}
+                <div id="recaptcha-anchor"></div>
 
                 <motion.button
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-neon-blue hover:bg-[#0B3A63] shadow-[0_4px_14px_rgba(15,76,129,0.2)] mt-2"
+                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-blue to-[#0e63a1] shadow-[0_4px_20px_rgba(59,130,246,0.3)] hover:brightness-110 mt-2"
                 >
                   {loading ? (
                     <span>DISPATCHING OTP CODE...</span>
@@ -532,11 +649,11 @@ export default function Auth() {
                 onSubmit={handleVerifyOtp}
                 className="space-y-6 text-left"
               >
-                <div className="border-b border-[#F1F5F9] pb-4 mb-5">
-                  <h2 className="text-lg font-extrabold font-heading text-neon-blue uppercase tracking-wider">
+                <div className="border-b border-white/10 pb-4 mb-5">
+                  <h2 className="text-lg font-black font-heading text-neon-blue uppercase tracking-widest">
                     Enter Verification Code
                   </h2>
-                  <p className="text-[10px] text-text-secondary mt-1 font-medium tracking-wide">
+                  <p className="text-[10px] text-slate-400 mt-1 block leading-normal font-semibold uppercase tracking-wider">
                     Verify the security passcode dispatched to your device.
                   </p>
                 </div>
@@ -545,39 +662,39 @@ export default function Auth() {
                   <button
                     type="button"
                     onClick={() => { setIsOtpSent(false); resetState(); }}
-                    className="text-[10px] text-neon-blue hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                    className="text-[10px] text-neon-blue hover:text-neon-purple hover:underline flex items-center gap-1 cursor-pointer font-black uppercase tracking-wider bg-transparent border-none p-0 transition-colors"
                   >
                     <ArrowLeft size={12} /> Change number
                   </button>
-                  <span className="text-[10px] text-text-secondary font-bold">Sent to: {phoneNumber}</span>
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Sent to: {phoneNumber}</span>
                 </div>
 
-                <p className="text-xs text-text-secondary leading-relaxed">
+                <p className="text-xs text-slate-300 leading-relaxed font-medium">
                   Please key in the 6-digit passcode transmitted to your mobile number.
                 </p>
 
                 {/* Simulated Bypass OTP notification */}
                 {generatedOtp && (
-                  <div className="bg-[#0F4C81]/5 border border-[#0F4C81]/15 rounded-2xl p-4 text-left flex items-start gap-3 my-2 shadow-sm">
-                    <Sparkles size={16} className="text-[#FF9933] mt-0.5 flex-shrink-0 animate-bounce" />
+                  <div className="bg-neon-blue/10 border border-neon-blue/20 rounded-2xl p-4 text-left flex items-start gap-3 my-2 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                    <Sparkles size={16} className="text-neon-purple mt-0.5 flex-shrink-0 animate-bounce" />
                     <div className="space-y-1">
-                      <span className="text-[10px] font-extrabold text-[#0F4C81] uppercase tracking-wider block">
+                      <span className="text-[10px] font-black text-neon-blue uppercase tracking-wider block">
                         Clinical Test Passcode Active
                       </span>
-                      <span className="text-xs text-text-primary font-bold block mt-1">
-                        Your Bypass Code: <span className="text-[#FF9933] text-sm bg-[#FF9933]/10 px-2 py-0.5 rounded-md font-mono border border-[#FF9933]/20 font-black tracking-wider">{generatedOtp}</span>
+                      <span className="text-xs text-white font-bold block mt-1">
+                        Your Bypass Code: <span className="text-neon-purple text-sm bg-neon-purple/20 px-2 py-0.5 rounded-md font-mono border border-neon-purple/30 font-black tracking-wider">{generatedOtp}</span>
                       </span>
-                      <span className="text-[9px] text-[#556987] block leading-normal mt-1.5 font-medium">
+                      <span className="text-[9px] text-slate-400 block leading-normal mt-1.5 font-semibold">
                         Use this code below to instantly bypass the Firebase SMS queue and access the portal.
                       </span>
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold tracking-wider text-text-secondary block">Security Passcode (6-Digits)</label>
+                <div className="space-y-2.5">
+                  <label className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Security Passcode (6-Digits)</label>
                   <div className="relative flex items-center">
-                    <KeyRound size={15} className="absolute left-4 text-text-muted z-10" />
+                    <KeyRound size={15} className="absolute left-4 text-slate-500 z-10" />
                     <input
                       type="text"
                       required
@@ -586,7 +703,7 @@ export default function Auth() {
                       placeholder="e.g. 123456"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                      className="w-full pl-12 pr-4 py-3 rounded-xl text-center text-sm font-bold tracking-[0.3em]"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-xl text-center text-sm font-black bg-slate-900/60 border border-white/10 text-white focus:outline-none focus:border-neon-purple focus:ring-1 focus:ring-neon-purple tracking-[0.3em] transition-all"
                     />
                   </div>
                 </div>
@@ -596,7 +713,7 @@ export default function Auth() {
                   whileTap={{ scale: 0.99 }}
                   disabled={loading}
                   type="submit"
-                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-neon-purple hover:bg-[#0F8A7D] shadow-[0_4px_14px_rgba(20,184,166,0.2)] mt-2"
+                  className="w-full h-[48px] rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-purple to-neon-blue shadow-[0_4px_20px_rgba(147,51,234,0.3)] hover:brightness-110 mt-2"
                 >
                   {loading ? (
                     <span>VERIFYING CODE...</span>
@@ -609,14 +726,14 @@ export default function Auth() {
                 </motion.button>
 
                 <div className="flex items-center justify-between text-[11px] pt-1">
-                  <span className="text-text-muted font-medium">Didn't receive passcode?</span>
+                  <span className="text-slate-500 font-bold uppercase tracking-wider">Didn't receive passcode?</span>
                   {timer > 0 ? (
-                    <span className="text-text-muted font-bold">Resend in {timer}s</span>
+                    <span className="text-neon-purple font-extrabold">Resend in {timer}s</span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleResendOtp}
-                      className="text-neon-blue hover:underline cursor-pointer font-bold"
+                      className="text-neon-blue hover:text-neon-purple hover:underline cursor-pointer font-black uppercase tracking-wider bg-transparent border-none p-0 transition-colors"
                     >
                       Resend Code
                     </button>
@@ -629,8 +746,8 @@ export default function Auth() {
           {!isOnboarding && (
             <>
               <div className="relative flex items-center justify-center my-8">
-                <div className="absolute inset-0 w-full h-[1px] bg-[#F1F5F9]" />
-                <span className="relative z-10 px-4 bg-white text-[9px] uppercase font-extrabold tracking-widest text-text-muted">
+                <div className="absolute inset-0 w-full h-[1px] bg-white/10" />
+                <span className="relative z-10 px-4 bg-slate-950/80 rounded-full py-0.5 border border-white/5 text-[9px] uppercase font-black tracking-widest text-slate-400">
                   OR IDENTITY BRIDGE
                 </span>
               </div>
@@ -641,7 +758,7 @@ export default function Auth() {
                 whileTap={{ scale: 0.99 }}
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full h-[46px] rounded-xl bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-xs text-text-secondary font-bold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm"
+                className="w-full h-[46px] rounded-xl bg-slate-900/50 border border-white/10 hover:bg-slate-900/85 text-xs text-slate-300 font-extrabold flex items-center justify-center gap-2.5 cursor-pointer transition-all shadow-sm"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" className="mr-1">
                   <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.5a5.99 5.99 0 0 1 5.99-6.013c1.49 0 2.854.55 3.907 1.455l3.057-3.057C19.102 3.1 16.697 2 13.99 2 8.163 2 3.5 6.663 3.5 12.5S8.163 23 13.99 23c5.383 0 9.877-3.85 9.877-9.5 0-.712-.083-1.4-.217-2.073l-11.41-.142z"/>
@@ -653,8 +770,8 @@ export default function Auth() {
         </motion.div>
 
         {/* Footer validation and security tags */}
-        <div className="flex items-center justify-center gap-2 mt-8 text-[10px] text-text-muted font-semibold">
-          <Shield size={12} className="text-neon-blue" />
+        <div className="flex items-center justify-center gap-2 mt-8 text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
+          <Shield size={12} className="text-neon-blue animate-pulse" />
           <span>Biometric validation and secure SSL tunneling active</span>
         </div>
       </div>

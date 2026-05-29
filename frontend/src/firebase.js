@@ -14,8 +14,8 @@ const firebaseConfig = {
   storageBucket: "mediverse-c2d59.firebasestorage.app",
   messagingSenderId: "589930110886",
   appId: "1:589930110886:web:5e93e5b4ed3c5b0ff4f967",
-  measurementId: "G-9JY39080BY",
-}
+  measurementId: "G-9JY39080BY"
+};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)

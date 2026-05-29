@@ -16,7 +16,8 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [userProfile, setUserProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [authChecking, setAuthChecking] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user) => {
@@ -32,7 +33,7 @@ export function AuthProvider({ children }) {
         setCurrentUser(null)
         setUserProfile(null)
       }
-      setLoading(false)
+      setAuthChecking(false)
     })
 
     return unsubscribe
@@ -118,7 +119,8 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     userProfile,
-    loading,
+    loading: authChecking || loading,
+    authChecking,
     initRecaptcha,
     sendOtp,
     verifyOtp,
@@ -137,7 +139,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {!authChecking && children}
     </AuthContext.Provider>
   )
 }

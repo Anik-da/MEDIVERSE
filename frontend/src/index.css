@@ -198,9 +198,12 @@ input, select, textarea {
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02) !important;
 }
 
-/* Pl-10 inputs require extra left padding to make space for leading icons */
+/* Pl-10 and pl-12 inputs require extra left padding to make space for leading icons */
 input.pl-10, input[type="tel"] {
   padding-left: 40px !important;
+}
+input.pl-12 {
+  padding-left: 48px !important;
 }
 
 input:focus, select:focus, textarea:focus {

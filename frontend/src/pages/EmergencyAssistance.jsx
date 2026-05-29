@@ -21,10 +21,13 @@ const defaultEmergencyContacts = [
 
 export default function EmergencyAssistance() {
   const [sosActive, setSosActive] = useState(false)
-  const [showPopup, setShowPopup] = useState(false)
-  const [countdown, setCountdown] = useState(null)
   const [eta, setEta] = useState('~8 min')
   const [nearestHospital, setNearestHospital] = useState('Apollo Hospital')
+  
+  // Custom status indicators for the webhook post
+  const [loadingAlert, setLoadingAlert] = useState(false)
+  const [alertSuccess, setAlertSuccess] = useState(false)
+  const [alertError, setAlertError] = useState('')
 
   const { currentUser, userProfile } = useAuth()
 
@@ -39,191 +42,141 @@ export default function EmergencyAssistance() {
     }] : [])
   ]
 
-  const triggerSOS = () => {
-    setShowPopup(true)
-    let count = 5
-    setCountdown(count)
-    const interval = setInterval(async () => {
-      count--
-      setCountdown(count)
-      if (count <= 0) {
-        clearInterval(interval)
-        setShowPopup(false)
-        setCountdown(null)
-        setSosActive(true)
-        
-        // Query location coordinates & transmit user provided emergency details
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(async (pos) => {
-            const { latitude, longitude } = pos.coords
-            
-            // Dispatch live POST containing name, number, email, emergency email, emergency number & location
-            try {
-              await fetch('https://amitprakesh.app.n8n.cloud/webhook/emergency-SOS', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  name: userProfile?.name || currentUser?.displayName || "MediVerse Patient",
-                  phone: userProfile?.phone || currentUser?.phoneNumber || "Emergency Line",
-                  email: userProfile?.email || currentUser?.email || "patient@mediverse.com",
-                  emergency_phone: userProfile?.emergencyNumber || "",
-                  emergency_email: userProfile?.emergencyEmail || "",
-                  location_address: userProfile?.location || "",
-                  latitude: latitude,
-                  longitude: longitude,
-                  emergency_type: 'Critical Medical Alert'
-                })
-              })
-            } catch (err) {
-              console.error("SOS Webhook submission failed:", err)
-            }
+  const triggerSOS = async () => {
+    setLoadingAlert(true)
+    setAlertSuccess(false)
+    setAlertError('')
+    setSosActive(false)
 
-            try {
-              const idToken = await currentUser.getIdToken()
-              const res = await fetch('http://localhost:8000/emergency-alert', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${idToken}`
-                },
-                body: JSON.stringify({
-                  latitude,
-                  longitude,
-                  description: 'Emergency SOS manual dispatch',
-                  severity: 'Critical'
-                })
-              })
-              const data = await res.json()
-              if (data.status === 'alert_sent') {
-                setEta(data.nearest_hospital.eta)
-                setNearestHospital(data.nearest_hospital.name)
-              }
-            } catch (err) {
-              console.error("API error during SOS alert:", err)
-            }
-
-            // Save log in Firestore database
-            await saveEmergencyLog(currentUser.uid, {
-              latitude,
-              longitude,
-              description: 'Emergency SOS manual dispatch',
-              severity: 'Critical',
-              emergencyEmail: userProfile?.emergencyEmail || '',
-              emergencyNumber: userProfile?.emergencyNumber || '',
-            })
-            // Save in Realtime Database
-            await updateLiveLocation(currentUser.uid, latitude, longitude)
-          }, async (err) => {
-            console.warn("SOS Geolocation failed. Triggering backup satellite routing.", err)
-            const fallbackLat = 22.5726
-            const fallbackLng = 88.3639
-            
-            // Webhook fallback dispatch with personal emergency details
-            try {
-              await fetch('https://amitprakesh.app.n8n.cloud/webhook/emergency-SOS', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  name: userProfile?.name || currentUser?.displayName || "MediVerse Patient",
-                  phone: userProfile?.phone || currentUser?.phoneNumber || "Emergency Line",
-                  email: userProfile?.email || currentUser?.email || "patient@mediverse.com",
-                  emergency_phone: userProfile?.emergencyNumber || "",
-                  emergency_email: userProfile?.emergencyEmail || "",
-                  location_address: userProfile?.location || "",
-                  latitude: fallbackLat,
-                  longitude: fallbackLng,
-                  emergency_type: 'Critical Medical Alert (Fallback GPS)'
-                })
-              })
-            } catch (wErr) {
-              console.error("SOS Webhook fallback submission failed:", wErr)
-            }
-
-            try {
-              const idToken = await currentUser.getIdToken()
-              const res = await fetch('http://localhost:8000/emergency-alert', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${idToken}`
-                },
-                body: JSON.stringify({
-                  latitude: fallbackLat,
-                  longitude: fallbackLng,
-                  description: 'Emergency SOS dispatch (GPS unavailable)',
-                  severity: 'Critical'
-                })
-              })
-              const data = await res.json()
-              if (data.status === 'alert_sent') {
-                setEta(data.nearest_hospital.eta)
-                setNearestHospital(data.nearest_hospital.name)
-              }
-            } catch (apiErr) {
-              console.error("API error during SOS alert backup:", apiErr)
-            }
-
-            await saveEmergencyLog(currentUser.uid, {
-              latitude: fallbackLat,
-              longitude: fallbackLng,
-              description: 'Emergency SOS dispatch (GPS unavailable)',
-              severity: 'Critical',
-              emergencyEmail: userProfile?.emergencyEmail || '',
-              emergencyNumber: userProfile?.emergencyNumber || '',
-            })
-            await updateLiveLocation(currentUser.uid, fallbackLat, fallbackLng)
-          })
-        } else {
-          // If Geolocation is completely unsupported
-          const fallbackLat = 22.5726
-          const fallbackLng = 88.3639
-          
-          try {
-            await fetch('https://amitprakesh.app.n8n.cloud/webhook/emergency-SOS', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                name: userProfile?.name || currentUser?.displayName || "MediVerse Patient",
-                phone: userProfile?.phone || currentUser?.phoneNumber || "Emergency Line",
-                email: userProfile?.email || currentUser?.email || "patient@mediverse.com",
-                emergency_phone: userProfile?.emergencyNumber || "",
-                emergency_email: userProfile?.emergencyEmail || "",
-                location_address: userProfile?.location || "",
-                latitude: fallbackLat,
-                longitude: fallbackLng,
-                emergency_type: 'Critical Medical Alert (Unsupported GPS)'
-              })
-            })
-          } catch (wErr) {
-            console.error("SOS Webhook unsupported fallback failed:", wErr)
-          }
-
-          await saveEmergencyLog(currentUser.uid, {
-            latitude: fallbackLat,
-            longitude: fallbackLng,
-            description: 'Emergency SOS dispatch (GPS not supported)',
-            severity: 'Critical',
-            emergencyEmail: userProfile?.emergencyEmail || '',
-            emergencyNumber: userProfile?.emergencyNumber || '',
-          })
+    const sendEmergencyPost = async (lat, lng) => {
+      try {
+        const payload = {
+          fullName: userProfile?.name || currentUser?.displayName || "MediVerse Patient",
+          phoneNumber: userProfile?.phone || currentUser?.phoneNumber || "Emergency Line",
+          email: userProfile?.email || currentUser?.email || "patient@mediverse.com",
+          emergencyContactNumber: userProfile?.emergencyNumber || "",
+          emergencyContactEmail: userProfile?.emergencyEmail || "",
+          latitude: lat,
+          longitude: lng
         }
-      }
-    }, 1000)
-  }
 
-  const cancelSOS = () => { setShowPopup(false); setCountdown(null) }
+        // Send POST request to the specified Cloud Webhook
+        const response = await fetch('https://amitprakesh.app.n8n.cloud/webhook-test/emergency%20alert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to transmit. Server responded with status ${response.status}`)
+        }
+
+        // Send standard backup logging webhook
+        try {
+          await fetch('https://amitprakesh.app.n8n.cloud/webhook/emergency-SOS', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              name: payload.fullName,
+              phone: payload.phoneNumber,
+              email: payload.email,
+              emergency_phone: payload.emergencyContactNumber,
+              emergency_email: payload.emergencyContactEmail,
+              location_address: userProfile?.location || "",
+              latitude: lat,
+              longitude: lng,
+              emergency_type: 'Critical Medical Alert'
+            })
+          })
+        } catch (wErr) {
+          console.warn("Secondary logging webhook skipped:", wErr)
+        }
+
+        // Try local local backend server alert
+        try {
+          const idToken = await currentUser.getIdToken()
+          const res = await fetch('http://localhost:8000/emergency-alert', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              latitude: lat,
+              longitude: lng,
+              description: 'Emergency SOS manual dispatch',
+              severity: 'Critical'
+            })
+          })
+          const data = await res.json()
+          if (data.status === 'alert_sent') {
+            setEta(data.nearest_hospital.eta)
+            setNearestHospital(data.nearest_hospital.name)
+          }
+        } catch (err) {
+          console.warn("Local microservice endpoint alert bypassed:", err)
+        }
+
+        // Save log in Firestore database
+        if (currentUser) {
+          try {
+            await saveEmergencyLog(currentUser.uid, {
+              latitude: lat,
+              longitude: lng,
+              description: 'Emergency SOS Webhook dispatch',
+              severity: 'Critical',
+              emergencyEmail: payload.emergencyContactEmail,
+              emergencyNumber: payload.emergencyContactNumber,
+            })
+            await updateLiveLocation(currentUser.uid, lat, lng)
+          } catch (dbErr) {
+            console.warn("Firestore emergency logging skipped:", dbErr)
+          }
+        }
+
+        setAlertSuccess(true)
+        setSosActive(true)
+      } catch (err) {
+        console.error("SOS Webhook transmission failed:", err)
+        setAlertError(err.message || 'Transmission failed. Please check network connection.')
+      } finally {
+        setLoadingAlert(false)
+      }
+    }
+
+    // Request user's current GPS location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+          await sendEmergencyPost(latitude, longitude)
+        },
+        async (err) => {
+          console.warn("Geolocation failed. Emitting default coordinate payload...", err)
+          // Default location fallback (e.g. Bangalore center as specified in prompt sample)
+          const fallbackLat = 12.9716
+          const fallbackLng = 77.5946
+          await sendEmergencyPost(fallbackLat, fallbackLng)
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      )
+    } else {
+      console.warn("Geolocation unsupported. Emitting default coordinate payload...")
+      const fallbackLat = 12.9716
+      const fallbackLng = 77.5946
+      await sendEmergencyPost(fallbackLat, fallbackLng)
+    }
+  }
 
   return (
     <div>
       <PageHeader icon={AlertTriangle} title="Emergency Assistance" subtitle="One-tap SOS with live location, first-aid, and real-time guardian notification." accentColor="neon-red" />
 
-      {/* Red Alert Panel */}
+      {/* Red Active Alert Panel */}
       {sosActive && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -245,6 +198,48 @@ export default function EmergencyAssistance() {
         </motion.div>
       )}
 
+      {/* Success Banner */}
+      {alertSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 rounded-2xl bg-green-50 border border-neon-green/30 flex items-center justify-between text-left shadow-lg"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center text-neon-green animate-pulse">
+              <Shield size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-neon-green uppercase tracking-wider">Emergency Alert Sent Successfully</p>
+              <p className="text-[10px] text-text-secondary mt-0.5">
+                Your coordinates and medical parameters have been successfully received by the emergency response queue!
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] bg-neon-green/15 text-neon-green border border-neon-green/30 px-2.5 py-1 rounded-full font-bold">TRANSMITTED</span>
+        </motion.div>
+      )}
+
+      {/* Error Banner */}
+      {alertError && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 rounded-2xl bg-red-50 border border-neon-red/30 flex items-center justify-between text-left shadow-lg"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-neon-red/10 flex items-center justify-center text-neon-red">
+              <AlertTriangle size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-neon-red uppercase tracking-wider">SOS Transmission Error</p>
+              <p className="text-[10px] text-text-secondary mt-0.5">{alertError}</p>
+            </div>
+          </div>
+          <span className="text-[10px] bg-neon-red/15 text-neon-red border border-neon-red/30 px-2.5 py-1 rounded-full font-bold">FAILED</span>
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* SOS Button Panel */}
         <div className="lg:col-span-1 space-y-4">
@@ -254,23 +249,26 @@ export default function EmergencyAssistance() {
                 onClick={triggerSOS}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="relative w-40 h-40 rounded-full cursor-pointer"
+                className="relative w-44 h-44 rounded-full cursor-pointer flex items-center justify-center"
               >
                 {/* Pulse rings */}
                 <motion.div animate={{ scale: [1, 1.5], opacity: [0.3, 0] }} transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 rounded-full border-2 border-neon-red" />
+                  className="absolute inset-0 rounded-full border-2 border-neon-red pointer-events-none" />
                 <motion.div animate={{ scale: [1, 1.3], opacity: [0.2, 0] }} transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                  className="absolute inset-0 rounded-full border-2 border-neon-red" />
+                  className="absolute inset-0 rounded-full border-2 border-neon-red pointer-events-none" />
                 {/* Button */}
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-neon-red to-neon-pink flex items-center justify-center"
-                  style={{ boxShadow: '0 0 30px rgba(239,68,68,0.3)' }}>
+                  style={{ boxShadow: '0 0 40px rgba(239,68,68,0.4)' }}>
                   <div className="text-center">
-                    <AlertTriangle size={32} className="text-white mx-auto mb-1" />
-                    <span className="font-heading text-lg font-bold text-white tracking-wider">SOS</span>
+                    <AlertTriangle size={36} className="text-white mx-auto mb-1 animate-bounce" />
+                    <span className="font-heading text-2xl font-black text-white tracking-widest block">SOS</span>
+                    <span className="text-[9px] uppercase font-bold text-white/80 tracking-wider">Tap to Alert</span>
                   </div>
                 </div>
               </motion.button>
-              <p className="text-xs text-text-secondary mt-5 text-center font-semibold">Tap to send emergency alert</p>
+              <p className="text-xs text-text-secondary mt-5 text-center font-bold uppercase tracking-wider text-neon-red animate-pulse">
+                🔴 IMMEDIATE CRITICAL RESPONSE ACTIVE
+              </p>
             </div>
           </GlowCard>
 
@@ -346,23 +344,29 @@ export default function EmergencyAssistance() {
         </div>
       </div>
 
-      {/* Countdown popup */}
+      {/* Loading beacon overlay */}
       <AnimatePresence>
-        {showPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white border border-cyber-border p-6 rounded-3xl max-w-sm w-full mx-4 text-center shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-neon-red to-neon-pink animate-pulse" />
-              <h3 className="font-heading text-base font-extrabold text-neon-red uppercase tracking-wider mb-2">Triggering Emergency SOS</h3>
+        {loadingAlert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white border border-cyber-border p-8 rounded-3xl max-w-sm w-full mx-4 text-center shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-neon-red via-neon-purple to-neon-blue animate-pulse" />
+              <h3 className="font-heading text-base font-extrabold text-neon-red uppercase tracking-wider mb-2 animate-pulse">Broadcasting Alert</h3>
               <p className="text-xs text-text-secondary mb-6 leading-relaxed">
-                Dispatching coordinates, registered medical address, and SMS/Email notifications to your guardian contact.
+                Querying secure satellite GPS coordinates, binding patient clinical parameters, and transmitting payload to cloud networks.
               </p>
-              <div className="w-20 h-20 rounded-full bg-neon-red/10 border-2 border-neon-red flex items-center justify-center mx-auto mb-6">
-                <span className="text-2xl font-black font-heading text-neon-red">{countdown}</span>
+              
+              {/* Spinner */}
+              <div className="relative w-16 h-16 mx-auto mb-6">
+                <div className="absolute inset-0 rounded-full border-4 border-slate-100" />
+                <div className="absolute inset-0 rounded-full border-4 border-neon-red border-t-transparent animate-spin" />
               </div>
-              <button onClick={cancelSOS} className="w-full py-2.5 rounded-xl border border-cyber-border text-xs text-text-secondary hover:bg-cyber-hover cursor-pointer transition-colors font-bold uppercase tracking-wider">
-                Cancel Alert
-              </button>
+
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">Connecting secure tunnel...</span>
             </motion.div>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { MapPin, Navigation, Clock, Phone, Star, ChevronRight, Locate, Ambulance } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
@@ -50,62 +50,148 @@ export default function HospitalFinder() {
     }
   }
 
+  // Google Maps Integration Effect
+  useEffect(() => {
+    if (located && coordinates && window.google) {
+      const initMap = async () => {
+        // Allow a small tick for the DOM element to mount
+        await new Promise(resolve => setTimeout(resolve, 50))
+        const mapElement = document.getElementById('google-map')
+        if (!mapElement) return
+
+        try {
+          // Custom style suited for light-mode presentation
+          const mapOptions = {
+            center: { lat: coordinates.latitude, lng: coordinates.longitude },
+            zoom: 14,
+            disableDefaultUI: true,
+            zoomControl: true,
+            styles: [
+              { elementType: 'geometry', stylers: [{ color: '#F1F5F9' }] },
+              { elementType: 'labels.text.stroke', stylers: [{ color: '#FFFFFF' }] },
+              { elementType: 'labels.text.fill', stylers: [{ color: '#475569' }] },
+              { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#CBD5E1' }] },
+              { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#0F4C81' }] },
+              { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
+              { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#E2E8F0' }] },
+              { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#E2E8F0' }] }
+            ]
+          }
+
+          const map = new window.google.maps.Map(mapElement, mapOptions)
+
+          // 1. Marker for User Location
+          new window.google.maps.Marker({
+            position: { lat: coordinates.latitude, lng: coordinates.longitude },
+            map: map,
+            title: "Your Location",
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: '#0F4C81',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2,
+            }
+          })
+
+          // 2. Offsets for nearby hospitals to display around user
+          const offsets = [
+            { lat: 0.006, lng: 0.005 },
+            { lat: -0.005, lng: -0.008 },
+            { lat: 0.007, lng: -0.006 },
+            { lat: -0.004, lng: 0.008 }
+          ]
+
+          mockHospitals.forEach((h, i) => {
+            const hPos = {
+              lat: coordinates.latitude + (offsets[i]?.lat || 0),
+              lng: coordinates.longitude + (offsets[i]?.lng || 0)
+            }
+
+            const isSelected = selectedHospital?.name === h.name
+
+            const marker = new window.google.maps.Marker({
+              position: hPos,
+              map: map,
+              title: h.name,
+              icon: {
+                path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                scale: isSelected ? 8 : 6,
+                fillColor: isSelected ? '#22C55E' : '#14B8A6',
+                fillOpacity: 0.95,
+                strokeColor: '#ffffff',
+                strokeWeight: 1.5,
+              }
+            })
+
+            const infoContent = `
+              <div style="color: #1e293b; font-family: 'Inter', sans-serif; padding: 6px; min-width: 160px; text-align: left;">
+                <h4 style="margin: 0 0 4px 0; font-size: 12px; font-weight: 800; color: #0F4C81;">${h.name}</h4>
+                <p style="margin: 0; font-size: 10px; font-weight: 600; color: #475569;">${h.type} • ⭐ ${h.rating}</p>
+                <p style="margin: 4px 0 0 0; font-size: 10px; color: #22C55E; font-weight: 700;">${h.dist} away (${h.eta})</p>
+              </div>
+            `
+
+            const infoWindow = new window.google.maps.InfoWindow({
+              content: infoContent
+            })
+
+            marker.addListener('click', () => {
+              infoWindow.open(map, marker)
+              setSelectedHospital(h)
+            })
+
+            if (isSelected) {
+              infoWindow.open(map, marker)
+            }
+          })
+        } catch (err) {
+          console.error("Map rendering failed:", err)
+        }
+      }
+      initMap()
+    }
+  }, [located, coordinates, selectedHospital?.name])
+
   return (
     <div>
       <PageHeader icon={MapPin} title="Nearby Hospitals" subtitle="Find and navigate to the nearest medical facilities." accentColor="neon-green" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 text-left">
         {/* Map Area */}
         <div className="lg:col-span-3">
-          <GlowCard hover={false} glowColor="neon-green" className="h-full min-h-[400px] relative">
-            {/* Simulated map */}
-            <div className="absolute inset-6 rounded-xl overflow-hidden bg-cyber-dark border border-cyber-border">
-              <div className="absolute inset-0"
-                style={{
-                  backgroundImage: 'linear-gradient(rgba(0,240,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,240,255,0.05) 1px, transparent 1px)',
-                  backgroundSize: '40px 40px',
-                }}>
-                {/* User location dot */}
-                {located && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <motion.div animate={{ scale: [1, 2], opacity: [0.4, 0] }} transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-neon-blue" />
-                    <div className="w-4 h-4 rounded-full bg-neon-blue border-2 border-white relative z-10"
-                      style={{ boxShadow: '0 0 15px #00F0FF' }} />
-                  </motion.div>
-                )}
-                {/* Hospital markers */}
-                {located && mockHospitals.map((h, i) => {
-                  const positions = [
-                    { top: '30%', left: '60%' }, { top: '55%', left: '35%' },
-                    { top: '25%', left: '25%' }, { top: '70%', left: '65%' },
-                  ]
-                  return (
-                    <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 + i * 0.15 }}
-                      onClick={() => setSelectedHospital(h)}
-                      className="absolute cursor-pointer group" style={positions[i]}>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${selectedHospital?.name === h.name ? 'bg-neon-green scale-125' : 'bg-neon-purple/80 hover:bg-neon-green'}`}
-                        style={{ boxShadow: '0 0 10px rgba(168,85,247,0.4)' }}>
-                        <MapPin size={16} className="text-white" />
-                      </div>
-                    </motion.div>
-                  )
-                })}
-                {/* Center prompt */}
-                {!located && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <motion.button onClick={handleLocate} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                      disabled={locating}
-                      className="px-6 py-3 rounded-xl bg-gradient-to-r from-neon-green/20 to-neon-blue/20 border border-neon-green/30 text-sm text-neon-green font-medium flex items-center gap-2 cursor-pointer disabled:opacity-50">
-                      {locating ? (
-                        <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Locate size={18} /></motion.div> Locating...</>
-                      ) : (
-                        <><Locate size={18} /> Enable GPS Location</>
-                      )}
-                    </motion.button>
+          <GlowCard hover={false} glowColor="neon-green" className="w-full">
+            <div className="w-full rounded-2xl overflow-hidden bg-white border border-cyber-border" style={{ height: '390px' }}>
+              {located ? (
+                // Google Maps Canvas
+                <div id="google-map" className="w-full h-full"></div>
+              ) : (
+                // Enable Location prompt with beautiful light slate grid background
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-[#F8FAFC]"
+                     style={{
+                       backgroundImage: 'linear-gradient(rgba(15,76,129,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(15,76,129,0.03) 1px, transparent 1px)',
+                       backgroundSize: '30px 30px',
+                     }}>
+                  <div className="w-12 h-12 rounded-full bg-neon-green/10 border border-neon-green/30 flex items-center justify-center mb-4">
+                    <MapPin size={24} className="text-neon-green animate-bounce" />
                   </div>
-                )}
-              </div>
+                  <h3 className="font-heading text-sm font-bold text-text-primary uppercase tracking-wider mb-2">Hospital Locator Offline</h3>
+                  <p className="text-[11px] text-text-secondary max-w-xs text-center mb-6 leading-relaxed font-medium">
+                    MediVerse AI requires GPS satellite synchronization to discover nearest registered medical emergency services in your vicinity.
+                  </p>
+                  
+                  <motion.button onClick={handleLocate} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    disabled={locating}
+                    className="px-6 py-3 rounded-xl bg-neon-blue hover:bg-[#0B3A63] text-xs text-white font-bold tracking-wider uppercase cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow-sm transition-colors">
+                    {locating ? (
+                      <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}><Locate size={14} /></motion.div> Syncing Location...</>
+                    ) : (
+                      <><Locate size={14} /> Enable GPS Sync</>
+                    )}
+                  </motion.button>
+                </div>
+              )}
             </div>
           </GlowCard>
         </div>
@@ -113,43 +199,43 @@ export default function HospitalFinder() {
         {/* Hospital list */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-heading text-sm font-semibold text-text-primary">Nearby Facilities</h3>
-            {located && <span className="text-xs text-neon-green">● {mockHospitals.length} found</span>}
+            <h3 className="font-heading text-xs font-bold text-text-primary uppercase tracking-wider">Nearby Facilities</h3>
+            {located && <span className="text-xs text-neon-green font-semibold">● {mockHospitals.length} active</span>}
           </div>
 
           {!located && (
-            <div className="flex flex-col items-center justify-center h-48 text-center">
-              <MapPin size={36} className="text-text-muted opacity-30 mb-3" />
-              <p className="text-sm text-text-secondary">Enable location to find hospitals</p>
+            <div className="flex flex-col items-center justify-center h-[390px] text-center border border-dashed border-cyber-border rounded-3xl bg-[#FFFFFF]">
+              <MapPin size={32} className="text-text-muted opacity-30 mb-3 animate-pulse" />
+              <p className="text-xs text-text-secondary max-w-[180px] leading-relaxed font-semibold">Please enable GPS synchronization to discover local clinics.</p>
             </div>
           )}
 
           {located && mockHospitals.map((h, i) => (
-            <GlowCard key={i} delay={i * 0.1} onClick={() => setSelectedHospital(h)}
-              className={`${selectedHospital?.name === h.name ? '!border-neon-green/40' : ''}`} glowColor="neon-green">
+            <GlowCard key={i} delay={i * 0.08} onClick={() => setSelectedHospital(h)}
+              className={`cursor-pointer transition-all border ${selectedHospital?.name === h.name ? '!border-neon-green/50 bg-neon-green/5!' : 'border-cyber-border'}`} glowColor="neon-green">
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h4 className="font-semibold text-sm text-text-primary">{h.name}</h4>
-                  <span className="text-xs text-text-muted">{h.type}</span>
+                  <h4 className="font-bold text-sm text-text-primary">{h.name}</h4>
+                  <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">{h.type}</span>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-neon-orange">
-                  <Star size={12} fill="currentColor" /> {h.rating}
+                <div className="flex items-center gap-1 text-xs text-neon-orange font-bold">
+                  <Star size={11} fill="currentColor" /> {h.rating}
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-xs text-text-secondary mb-3">
-                <span className="flex items-center gap-1"><Navigation size={12} className="text-neon-blue" /> {h.dist}</span>
-                <span className="flex items-center gap-1"><Clock size={12} className="text-neon-green" /> {h.eta}</span>
-                <span className="flex items-center gap-1"><Phone size={12} className="text-neon-purple" /> {h.phone}</span>
+              <div className="flex items-center gap-4 text-[11px] text-text-secondary mb-3">
+                <span className="flex items-center gap-1"><Navigation size={11} className="text-neon-blue" /> {h.dist}</span>
+                <span className="flex items-center gap-1"><Clock size={11} className="text-neon-green" /> {h.eta}</span>
+                <span className="flex items-center gap-1"><Phone size={11} className="text-neon-purple" /> {h.phone}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-0.5 rounded-md bg-neon-blue/10 text-neon-blue border border-neon-blue/20">{h.beds} beds</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-neon-blue/10 text-neon-blue border border-neon-blue/20 font-bold">{h.beds} beds available</span>
                 {h.ambulance && (
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-neon-green/10 text-neon-green border border-neon-green/20 flex items-center gap-1">
-                    <Ambulance size={10} /> Available
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-neon-green/10 text-neon-green border border-neon-green/20 flex items-center gap-1 font-bold">
+                    <Ambulance size={10} /> Ambulance
                   </span>
                 )}
-                <button className="ml-auto text-xs text-neon-blue flex items-center gap-0.5 hover:underline cursor-pointer">
-                  Route <ChevronRight size={12} />
+                <button className="ml-auto text-[10px] text-neon-blue flex items-center gap-0.5 hover:underline cursor-pointer font-bold uppercase tracking-wider">
+                  Route <ChevronRight size={10} />
                 </button>
               </div>
             </GlowCard>
