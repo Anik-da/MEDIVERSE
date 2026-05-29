@@ -32,6 +32,7 @@ export default function Auth() {
   const { initRecaptcha, sendOtp, verifyOtp, loginGoogle, refreshProfile, setSimulatedUser } = useAuth()
   const navigate = useNavigate()
   const confirmationResultRef = useRef(null)
+  const recaptchaVerifierRef = useRef(null)
 
   // Countdown timer for resending OTP
   useEffect(() => {
@@ -82,33 +83,61 @@ export default function Auth() {
     setError('')
     setLoading(true)
 
-    let formattedPhone = phoneNumber.trim().replace(/\s+/g, '')
-    if (!formattedPhone) {
+    // Extremely forgiving and robust phone parser
+    let cleanPhone = phoneNumber.trim().replace(/[-\s()]/g, '')
+    if (!cleanPhone) {
       setError('Please provide a valid phone number.')
       setLoading(false)
       return
     }
 
-    // Auto-prefix country code +91 if user did not provide a leading '+' sign
-    if (!formattedPhone.startsWith('+')) {
-      if (formattedPhone.length === 10) {
-        formattedPhone = '+91' + formattedPhone
+    if (!cleanPhone.startsWith('+')) {
+      // If it starts with '0', strip it
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = cleanPhone.substring(1)
+      }
+      
+      // If it is exactly 10 digits now, prepend country code '+91'
+      if (cleanPhone.length === 10) {
+        cleanPhone = '+91' + cleanPhone
+      } 
+      // If it is 12 digits and starts with '91', prepend '+'
+      else if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+        cleanPhone = '+' + cleanPhone
       } else {
-        setError('Please include your country code (e.g. +91 99999 88888)')
+        setError('Please enter a valid 10-digit mobile number or specify country code (e.g. +91 99999 88888)')
         setLoading(false)
         return
       }
     }
+    
+    const formattedPhone = cleanPhone
 
     try {
-      // Auto-generate 6-digit clinical security passcode
-      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
-      setGeneratedOtp(mockOtp)
+      // 1. Initialize invisible Recaptcha verifier
+      if (!recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current = initRecaptcha('recaptcha-container')
+      }
+      
+      // 2. Attempt real Firebase Phone OTP transmission
+      const result = await sendOtp(formattedPhone, recaptchaVerifierRef.current)
+      confirmationResultRef.current = result
+      
+      // Real OTP successfully dispatched!
+      setGeneratedOtp('')
       setIsOtpSent(true)
       setTimer(60)
     } catch (err) {
-      console.error(err)
-      setError('Failed to auto-generate verification passcode. Please try again.')
+      console.warn("Real Firebase Phone Auth failed, using direct simulated local bypass:", err)
+      // Fallback: Generate a 6-digit clinical security passcode locally
+      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString()
+      setGeneratedOtp(mockOtp)
+      confirmationResultRef.current = null // Clear any real verification session
+      setIsOtpSent(true)
+      setTimer(60)
+      
+      // Give a clear, helpful warning in the UI
+      setError("Notice: Firebase SMS gateway is offline or not configured. Deployed local clinical bypass instead.")
     } finally {
       setLoading(false)
     }
@@ -126,33 +155,45 @@ export default function Auth() {
       return
     }
 
-    if (otpCode !== generatedOtp) {
-      setError('Incorrect passcode. Please check and retry.')
-      setLoading(false)
-      return
-    }
-
     try {
       let user = null
-      try {
-        // Try to perform a real anonymous sign-in to get a clean Firestore-backed UID
-        const userCredential = await signInAnonymously(auth)
-        user = userCredential.user
-      } catch (fbErr) {
-        console.warn("Firebase Anonymous auth failed, using direct simulated session:", fbErr)
-        // Direct local simulation session fallback
-        user = {
-          uid: 'patient_' + Math.floor(100000 + Math.random() * 900000),
-          phoneNumber: phoneNumber,
-          isAnonymous: true
+      
+      if (confirmationResultRef.current) {
+        // A real Firebase Phone verification session is active!
+        try {
+          user = await verifyOtp(confirmationResultRef.current, otpCode)
+        } catch (verifyErr) {
+          console.error("Real Firebase OTP verification failed:", verifyErr)
+          throw new Error("Incorrect passcode or expired session. Please retry or change number.")
         }
-        await setSimulatedUser(user, {
-          name: '',
-          phone: phoneNumber,
-          emergencyNumber: '',
-          emergencyEmail: '',
-          location: ''
-        })
+      } else {
+        // Fallback: local simulated validation checks
+        if (otpCode !== generatedOtp) {
+          setError('Incorrect passcode. Please check and retry.')
+          setLoading(false)
+          return
+        }
+
+        try {
+          // Perform a real anonymous sign-in to get a clean Firestore-backed UID
+          const userCredential = await signInAnonymously(auth)
+          user = userCredential.user
+        } catch (fbErr) {
+          console.warn("Firebase Anonymous auth failed, using direct simulated session:", fbErr)
+          // Direct local simulation session fallback
+          user = {
+            uid: 'patient_' + Math.floor(100000 + Math.random() * 900000),
+            phoneNumber: phoneNumber,
+            isAnonymous: true
+          }
+          await setSimulatedUser(user, {
+            name: '',
+            phone: phoneNumber,
+            emergencyNumber: '',
+            emergencyEmail: '',
+            location: ''
+          })
+        }
       }
       
       await checkUserProfileAndProceed(user)
