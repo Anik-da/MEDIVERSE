@@ -1,63 +1,113 @@
-import { motion } from 'framer-motion'
-import { User, Mail, Phone, MapPin, Shield, Calendar, Edit3, Camera, Activity, Heart, Award } from 'lucide-react'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  User, Mail, Phone, MapPin, Shield, Calendar, Edit3, Camera, 
+  Activity, Heart, Award, Check, X, AlertCircle 
+} from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import GlowCard from '../components/GlowCard'
 import { useAuth } from '../context/AuthContext'
+import { updateUserProfile } from '../services/firebaseService'
 
 export default function UserProfile() {
-  const { currentUser, userProfile } = useAuth()
+  const { currentUser, userProfile, refreshProfile } = useAuth()
+  const [isEditing, setIsEditing] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const nameVal = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Anik Das'
-  const emailVal = currentUser?.email || 'anik@mediverse.ai'
+  // Edit fields
+  const [editName, setEditName] = useState(userProfile?.name || currentUser?.displayName || '')
+  const [editEmail, setEditEmail] = useState(userProfile?.email || currentUser?.email || '')
+  const [editPhone, setEditPhone] = useState(userProfile?.phone || currentUser?.phoneNumber || '')
+  const [editLocation, setEditLocation] = useState(userProfile?.location || '')
+  const [editEmergencyNumber, setEditEmergencyNumber] = useState(userProfile?.emergencyNumber || '')
+  const [editEmergencyEmail, setEditEmergencyEmail] = useState(userProfile?.emergencyEmail || '')
+
+  const nameVal = userProfile?.name || currentUser?.displayName || 'Anik Das'
+  const emailVal = userProfile?.email || currentUser?.email || 'anik@mediverse.ai'
+  const phoneVal = userProfile?.phone || currentUser?.phoneNumber || '+91 98765 43210'
+  const locationVal = userProfile?.location || 'Kolkata, West Bengal'
+  
   const createdAtVal = currentUser?.metadata?.creationTime 
     ? new Date(currentUser.metadata.creationTime).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
     : 'January 2026'
 
-  const profileData = {
-    name: nameVal,
-    email: emailVal,
-    phone: userProfile?.phone || '+91 98765 43210',
-    location: userProfile?.location || 'Kolkata, India',
-    joined: createdAtVal,
-    bloodType: userProfile?.bloodType || 'B+',
-    age: userProfile?.age || 24,
-    allergies: userProfile?.allergies || ['Penicillin', 'Dust Mites'],
-    conditions: userProfile?.conditions || ['Mild Asthma'],
+  const badges = [
+    { label: '30-Day Streak', icon: Award, color: '#0F4C81' },
+    { label: 'Health Champion', icon: Heart, color: '#FF9933' },
+    { label: 'Wellness Pro', icon: Activity, color: '#14B8A6' },
+  ]
+
+  const handleSaveChanges = async (e) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+    setLoading(true)
+
+    try {
+      await updateUserProfile(currentUser.uid, {
+        name: editName,
+        email: editEmail,
+        phone: editPhone,
+        location: editLocation,
+        emergencyNumber: editEmergencyNumber,
+        emergencyEmail: editEmergencyEmail,
+      })
+      await refreshProfile()
+      setSuccess('Clinical identity updated successfully!')
+      setIsEditing(false)
+    } catch (err) {
+      console.error(err)
+      setError('Failed to update clinical profile. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const badges = [
-    { label: '30-Day Streak', icon: Award, color: '#00F0FF' },
-    { label: 'Health Champion', icon: Heart, color: '#EC4899' },
-    { label: 'Wellness Pro', icon: Activity, color: '#00FF88' },
-  ]
   return (
-    <div>
-      <PageHeader icon={User} title="User Profile" subtitle="Manage your health profile and preferences." />
+    <div className="space-y-6">
+      <PageHeader icon={User} title="User Profile" subtitle="Manage your physiological characteristics and registered emergency routing contacts." />
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-neon-red/20 text-neon-red text-xs font-bold flex items-center gap-2">
+          <AlertCircle size={14} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-bold flex items-center gap-2">
+          <Check size={14} />
+          <span>{success}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile card */}
+        {/* Profile Card Sidebar */}
         <div className="lg:col-span-1 space-y-4">
-          <GlowCard hover={false}>
-            <div className="flex flex-col items-center text-center">
+          <GlowCard hover={false} className="bg-white border border-cyber-border rounded-3xl p-6 text-center">
+            <div className="flex flex-col items-center">
               <div className="relative mb-4">
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center"
-                  style={{ boxShadow: '0 0 30px rgba(0,240,255,0.2)' }}>
+                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center shadow-lg shadow-neon-blue/10">
                   <User size={40} className="text-white" />
                 </div>
-                <button className="absolute -bottom-1 -right-1 w-8 h-8 rounded-lg bg-cyber-dark border border-cyber-border flex items-center justify-center text-text-muted hover:text-neon-blue transition-colors cursor-pointer">
-                  <Camera size={14} />
-                </button>
               </div>
-              <h3 className="font-heading text-lg font-bold text-text-primary">{profileData.name}</h3>
-              <p className="text-xs text-text-secondary">MediVerse Member</p>
+              <h3 className="font-heading text-lg font-black text-text-primary">{nameVal}</h3>
+              <p className="text-xs text-text-secondary font-medium">Verified Patient Member</p>
 
-              <div className="flex gap-3 mt-4">
+              <div className="flex gap-3 mt-5">
                 {badges.map((b, i) => {
                   const Icon = b.icon
                   return (
-                    <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 + i * 0.1 }}
-                      className="w-10 h-10 rounded-xl flex items-center justify-center" title={b.label}
-                      style={{ backgroundColor: `${b.color}15`, border: `1px solid ${b.color}30` }}>
+                    <motion.div 
+                      key={i} 
+                      initial={{ scale: 0 }} 
+                      animate={{ scale: 1 }} 
+                      transition={{ delay: 0.2 + i * 0.08 }}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center border border-cyber-border bg-cyber-black" 
+                      title={b.label}
+                    >
                       <Icon size={18} style={{ color: b.color }} />
                     </motion.div>
                   )
@@ -66,117 +116,181 @@ export default function UserProfile() {
             </div>
           </GlowCard>
 
-          <GlowCard hover={false}>
-            <h3 className="font-heading text-sm font-semibold mb-3 text-text-primary">Medical Info</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-text-muted">Blood Type</span>
-                <span className="text-sm font-semibold text-neon-red">{profileData.bloodType}</span>
+          {/* Medical Indicators */}
+          <GlowCard hover={false} className="bg-white border border-cyber-border rounded-3xl p-6 text-left">
+            <h3 className="font-heading text-xs font-extrabold mb-4 text-text-primary uppercase tracking-wider">Clinical Attributes</h3>
+            <div className="space-y-3.5">
+              <div className="flex justify-between items-center border-b border-cyber-border pb-2.5">
+                <span className="text-xs text-text-secondary">Blood Group</span>
+                <span className="text-xs font-extrabold text-neon-red bg-red-50 px-2 py-0.5 rounded-full">B+ Positive</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-cyber-border pb-2.5">
+                <span className="text-xs text-text-secondary">Allergies</span>
+                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Penicillin</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-text-muted">Age</span>
-                <span className="text-sm text-text-primary">{profileData.age}</span>
-              </div>
-              <div>
-                <span className="text-xs text-text-muted block mb-1.5">Allergies</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {profileData.allergies.map((a, i) => (
-                    <span key={i} className="text-xs px-2 py-0.5 rounded-md bg-neon-orange/10 text-neon-orange border border-neon-orange/20">{a}</span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span className="text-xs text-text-muted block mb-1.5">Conditions</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {profileData.conditions.map((c, i) => (
-                    <span key={i} className="text-xs px-2 py-0.5 rounded-md bg-neon-purple/10 text-neon-purple border border-neon-purple/20">{c}</span>
-                  ))}
-                </div>
+                <span className="text-xs text-text-secondary">Conditions</span>
+                <span className="text-[10px] font-bold text-neon-purple bg-neon-purple/5 px-2 py-0.5 rounded-full border border-neon-purple/10">Mild Asthma</span>
               </div>
             </div>
           </GlowCard>
         </div>
 
-        {/* Details */}
+        {/* Dynamic Personal & Emergency Details Block */}
         <div className="lg:col-span-2 space-y-4">
-          <GlowCard hover={false}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading text-sm font-semibold text-text-primary">Personal Information</h3>
-              <button className="text-xs text-neon-blue flex items-center gap-1 hover:underline cursor-pointer">
-                <Edit3 size={12} /> Edit
-              </button>
+          <GlowCard hover={false} className="bg-white border border-cyber-border rounded-3xl p-6 text-left">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-heading text-xs font-extrabold text-text-primary uppercase tracking-wider">Identity & Routing Records</h3>
+              {!isEditing ? (
+                <button 
+                  onClick={() => setIsEditing(true)} 
+                  className="text-xs text-neon-blue font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                >
+                  <Edit3 size={13} /> Edit Profile
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setIsEditing(false)} 
+                  className="text-xs text-text-secondary font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                >
+                  <X size={13} /> Cancel
+                </button>
+              )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { icon: User, label: 'Full Name', value: profileData.name },
-                { icon: Mail, label: 'Email', value: profileData.email },
-                { icon: Phone, label: 'Phone', value: profileData.phone },
-                { icon: MapPin, label: 'Location', value: profileData.location },
-                { icon: Calendar, label: 'Member Since', value: profileData.joined },
-                { icon: Shield, label: 'Account Status', value: 'Verified', isStatus: true },
-              ].map((item, i) => {
-                const Icon = item.icon
-                return (
-                  <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                    className="p-4 rounded-xl bg-cyber-dark border border-cyber-border">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Icon size={14} className="text-neon-blue" />
-                      <span className="text-xs text-text-muted">{item.label}</span>
-                    </div>
-                    <p className={`text-sm font-medium ${item.isStatus ? 'text-neon-green' : 'text-text-primary'}`}>{item.value}</p>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </GlowCard>
 
-          {/* Health Score */}
-          <GlowCard hover={false}>
-            <h3 className="font-heading text-sm font-semibold mb-4 text-text-primary">AI Health Score</h3>
-            <div className="flex items-center gap-6">
-              <div className="relative w-28 h-28 flex-shrink-0">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                  <motion.circle cx="50" cy="50" r="42" fill="none" stroke="url(#scoreGrad)" strokeWidth="8" strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 42}`}
-                    initial={{ strokeDashoffset: 2 * Math.PI * 42 }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 42 * (1 - 0.92) }}
-                    transition={{ duration: 1.5, ease: 'easeOut' }} />
-                  <defs>
-                    <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#00F0FF" />
-                      <stop offset="100%" stopColor="#A855F7" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <span className="font-heading text-2xl font-black gradient-text">92</span>
-                    <p className="text-[10px] text-text-muted">/100</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2 flex-1">
-                {[
-                  { label: 'Physical Health', pct: 88, color: '#00F0FF' },
-                  { label: 'Mental Wellness', pct: 75, color: '#A855F7' },
-                  { label: 'Sleep Quality', pct: 82, color: '#EC4899' },
-                  { label: 'Nutrition', pct: 91, color: '#00FF88' },
-                ].map((m, i) => (
-                  <div key={i}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-text-secondary">{m.label}</span>
-                      <span style={{ color: m.color }}>{m.pct}%</span>
+            <AnimatePresence mode="wait">
+              {!isEditing ? (
+                <motion.div 
+                  key="view-profile"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+                >
+                  {[
+                    { icon: User, label: 'Full Name', value: nameVal },
+                    { icon: Mail, label: 'Personal Email', value: emailVal },
+                    { icon: Phone, label: 'Phone Number', value: phoneVal },
+                    { icon: MapPin, label: 'GPS Coordinate Address', value: locationVal },
+                    { icon: Phone, label: 'Emergency Contact Phone', value: userProfile?.emergencyNumber || 'Not registered', highlight: true },
+                    { icon: Mail, label: 'Emergency Contact Email', value: userProfile?.emergencyEmail || 'Not registered', highlight: true },
+                    { icon: Calendar, label: 'Member Since', value: createdAtVal },
+                    { icon: Shield, label: 'Biometric Status', value: 'Active and Encrypted', isStatus: true },
+                  ].map((item, i) => {
+                    const Icon = item.icon
+                    return (
+                      <div key={i} className={`p-4 rounded-2xl bg-cyber-black border ${item.highlight ? 'border-neon-red/15 bg-red-50/10' : 'border-cyber-border'}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon size={13} className={item.highlight ? 'text-neon-red' : 'text-neon-blue'} />
+                          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">{item.label}</span>
+                        </div>
+                        <p className={`text-xs font-bold leading-normal ${item.isStatus ? 'text-emerald-600' : 'text-text-primary'}`}>{item.value}</p>
+                      </div>
+                    )
+                  })}
+                </motion.div>
+              ) : (
+                <motion.form 
+                  key="edit-profile"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onSubmit={handleSaveChanges}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Name */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold tracking-wider text-text-secondary">Full Name</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs"
+                      />
                     </div>
-                    <div className="h-1.5 rounded-full bg-cyber-dark overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${m.pct}%` }}
-                        transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
-                        className="h-full rounded-full" style={{ backgroundColor: m.color }} />
+
+                    {/* Email */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold tracking-wider text-text-secondary">Email Address</label>
+                      <input 
+                        type="email" 
+                        required
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs"
+                      />
+                    </div>
+
+                    {/* Phone */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold tracking-wider text-text-secondary">Phone Number</label>
+                      <input 
+                        type="tel" 
+                        required
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold"
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold tracking-wider text-text-secondary">Home Location / GPS Coordinates</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={editLocation}
+                        onChange={(e) => setEditLocation(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs"
+                      />
+                    </div>
+
+                    {/* Emergency Phone */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold tracking-wider text-neon-red font-extrabold">Emergency Contact Phone</label>
+                      <input 
+                        type="tel" 
+                        required
+                        value={editEmergencyNumber}
+                        onChange={(e) => setEditEmergencyNumber(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs border-neon-red/30 focus:border-neon-red!"
+                      />
+                    </div>
+
+                    {/* Emergency Email */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold tracking-wider text-neon-red font-extrabold">Emergency Contact Email</label>
+                      <input 
+                        type="email" 
+                        required
+                        value={editEmergencyEmail}
+                        onChange={(e) => setEditEmergencyEmail(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-xs border-neon-red/30 focus:border-neon-red!"
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-cyber-border">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsEditing(false)} 
+                      className="px-5 py-2.5 rounded-xl border border-cyber-border text-xs text-text-secondary hover:bg-cyber-hover cursor-pointer font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      disabled={loading}
+                      className="btn-neon-filled text-xs font-bold px-6 py-2.5 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {loading ? 'Saving Records...' : 'Save Updates'}
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
           </GlowCard>
         </div>
       </div>

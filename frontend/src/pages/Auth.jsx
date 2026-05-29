@@ -2,7 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Phone, Shield, ArrowRight, HeartPulse, Sparkles, KeyRound, ArrowLeft } from 'lucide-react'
+import { 
+  Phone, Shield, ArrowRight, HeartPulse, Sparkles, KeyRound, ArrowLeft, 
+  User, Mail, MapPin, AlertCircle, CheckCircle2 
+} from 'lucide-react'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { db } from '../firebase'
 import GlowCard from '../components/GlowCard'
 
 export default function Auth() {
@@ -13,10 +18,18 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [timer, setTimer] = useState(60)
 
-  const { initRecaptcha, sendOtp, verifyOtp, loginGoogle } = useAuth()
+  // Onboarding registration state variables
+  const [isOnboarding, setIsOnboarding] = useState(false)
+  const [tempUser, setTempUser] = useState(null)
+  const [onboardName, setOnboardName] = useState('')
+  const [onboardEmail, setOnboardEmail] = useState('')
+  const [onboardEmergencyNumber, setOnboardEmergencyNumber] = useState('')
+  const [onboardEmergencyEmail, setOnboardEmergencyEmail] = useState('')
+  const [onboardLocation, setOnboardLocation] = useState('')
+
+  const { initRecaptcha, sendOtp, verifyOtp, loginGoogle, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const confirmationResultRef = useRef(null)
-  const recaptchaInitialized = useRef(false)
 
   // Countdown timer for resending OTP
   useEffect(() => {
@@ -37,23 +50,45 @@ export default function Auth() {
     setOtpCode('')
   }
 
+  // Check if user has complete profile in Firestore
+  const checkUserProfileAndProceed = async (user) => {
+    try {
+      const docRef = doc(db, 'users', user.uid)
+      const docSnap = await getDoc(docRef)
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data()
+        // If they already filled out their name and emergency contacts, they are fully registered!
+        if (data.name && data.emergencyNumber && data.emergencyEmail) {
+          navigate('/home')
+          return
+        }
+      }
+      
+      // Direct user to Onboarding Profile complete screen
+      setTempUser(user)
+      setIsOnboarding(true)
+    } catch (err) {
+      console.error("Profile check error:", err)
+      setError("Successfully signed in, but failed to synchronize your medical records.")
+    }
+  }
+
   // Handle phone submission to dispatch live OTP code
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault()
     setError('')
     setLoading(true)
 
-    // Form validation
-    let formattedPhone = phoneNumber.trim()
+    let formattedPhone = phoneNumber.trim().replace(/\s+/g, '')
     if (!formattedPhone) {
-      setError('Please enter a valid mobile number.')
+      setError('Please provide a valid phone number.')
       setLoading(false)
       return
     }
 
     // Auto-prefix country code +91 if user did not provide a leading '+' sign
     if (!formattedPhone.startsWith('+')) {
-      // Assuming +91 default, user can enter full + country code
       if (formattedPhone.length === 10) {
         formattedPhone = '+91' + formattedPhone
       } else {
@@ -73,7 +108,6 @@ export default function Auth() {
     } catch (err) {
       console.error(err)
       setError(err.message || 'Failed to dispatch security code. Please check your number.')
-      // Reset captcha
       if (window.recaptchaVerifier) {
         try {
           window.recaptchaVerifier.clear()
@@ -100,11 +134,69 @@ export default function Auth() {
       if (!confirmationResultRef.current) {
         throw new Error('Verification session expired. Please request a new security code.')
       }
-      await verifyOtp(confirmationResultRef.current, otpCode)
-      navigate('/home')
+      const user = await verifyOtp(confirmationResultRef.current, otpCode)
+      await checkUserProfileAndProceed(user)
     } catch (err) {
       console.error(err)
       setError(err.message || 'Incorrect passcode. Please check and retry.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Auto detect user GPS coordinates during onboarding
+  const handleAutoDetectLocation = () => {
+    setError('')
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords
+          setOnboardLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`)
+        },
+        (err) => {
+          console.warn("Location permission denied", err)
+          setError("Location permission denied. Please write address manually.")
+        }
+      )
+    } else {
+      setError("Geolocation is not supported in this browser.")
+    }
+  }
+
+  // Complete first-time user profile registration
+  const handleCompleteOnboarding = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    if (!onboardName || !onboardEmergencyNumber || !onboardEmergencyEmail) {
+      setError('Please fill in all clinical and emergency contact inputs.')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const user = tempUser
+      if (!user) throw new Error('No authenticated user session found.')
+
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        name: onboardName,
+        email: onboardEmail,
+        phone: user.phoneNumber || phoneNumber || '',
+        emergencyNumber: onboardEmergencyNumber,
+        emergencyEmail: onboardEmergencyEmail,
+        location: onboardLocation,
+        healthScore: 85,
+        createdAt: serverTimestamp(),
+      }, { merge: true })
+
+      // Sync the Auth Context state
+      await refreshProfile()
+      navigate('/home')
+    } catch (err) {
+      console.error("Onboarding submission failed:", err)
+      setError(err.message || 'Failed to complete profile creation.')
     } finally {
       setLoading(false)
     }
@@ -122,8 +214,8 @@ export default function Auth() {
     setError('')
     setLoading(true)
     try {
-      await loginGoogle()
-      navigate('/home')
+      const user = await loginGoogle()
+      await checkUserProfileAndProceed(user)
     } catch (err) {
       setError(err.message || 'Google identity assertion aborted.')
     } finally {
@@ -132,7 +224,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-cyber-black relative overflow-hidden px-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-cyber-black relative overflow-hidden px-4 py-8">
       {/* Cyber grid background */}
       <div className="cyber-grid" />
 
@@ -140,58 +232,168 @@ export default function Auth() {
       <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-neon-blue/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full bg-neon-purple/5 blur-[120px] pointer-events-none" />
 
-
-
-      <div className="w-full max-w-[460px] relative z-10">
+      <div className="w-full max-w-[480px] relative z-10">
         {/* MediVerse AI brand header */}
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center mb-6">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-            className="w-14 h-14 rounded-2xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center mb-3 shadow-[0_0_30px_rgba(255,153,51,0.25)] border border-cyber-border"
+            className="w-12 h-12 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center mb-3 shadow-[0_0_20px_rgba(15,76,129,0.15)] border border-cyber-border"
           >
-            <HeartPulse size={28} className="text-white" />
+            <HeartPulse size={24} className="text-white" />
           </motion.div>
           <motion.h1
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="text-2xl font-bold font-heading text-text-primary tracking-wide"
+            className="text-xl font-extrabold font-heading text-neon-blue tracking-wide"
           >
             MEDIVERSE AI
           </motion.h1>
-          <p className="text-[10px] text-text-muted uppercase tracking-[0.2em] mt-1 font-medium flex items-center gap-1.5">
-            <Sparkles size={10} className="text-neon-blue" />
-            SECURE MOBILE IDENTITY CORE
+          <p className="text-[9px] text-text-secondary uppercase tracking-[0.2em] mt-1 font-bold flex items-center gap-1">
+            <Sparkles size={9} className="text-neon-blue animate-pulse" />
+            SECURE NATIONAL PATIENT IDENTITY
           </p>
         </div>
 
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
+          initial={{ y: 15, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.35 }}
         >
-          <GlowCard hover={false} glowColor={isOtpSent ? 'neon-purple' : 'neon-blue'} className="p-6 md:p-8">
-            <div className="flex border-b border-cyber-border/40 pb-4 mb-6">
-              <span className="flex-1 pb-1 text-center text-sm font-semibold tracking-wider text-neon-blue uppercase">
-                {isOtpSent ? 'OTP VERIFICATION' : 'SECURE LOG IN'}
-              </span>
-            </div>
-
-            {/* Error notifications */}
+          <GlowCard hover={false} className="p-6 md:p-8 bg-white border border-cyber-border rounded-3xl shadow-xl">
             {error && (
               <motion.div
-                initial={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-5 p-3 rounded-xl border border-neon-red/20 bg-neon-red/10 text-neon-red text-xs font-medium"
+                className="mb-5 p-3.5 rounded-xl border border-neon-red/20 bg-neon-red/5 text-neon-red text-xs font-semibold flex items-center gap-2"
               >
-                {error}
+                <AlertCircle size={14} className="flex-shrink-0" />
+                <span>{error}</span>
               </motion.div>
             )}
 
             <AnimatePresence mode="wait">
-              {!isOtpSent ? (
-                // Step 1: Input Mobile Number
+              {/* ─── ONBOARDING PROFILE REGISTRATION SCREEN ─────────── */}
+              {isOnboarding ? (
+                <motion.form
+                  key="onboarding-step"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  onSubmit={handleCompleteOnboarding}
+                  className="space-y-4 text-left"
+                >
+                  <div className="border-b border-cyber-border pb-3 mb-4">
+                    <span className="text-xs font-bold text-neon-blue uppercase tracking-widest block">
+                      Complete Clinical Profile
+                    </span>
+                    <span className="text-[10px] text-text-secondary mt-1 block leading-normal">
+                      Register your vital medical emergency routing parameters.
+                    </span>
+                  </div>
+
+                  {/* Patient Name */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase font-bold tracking-wider text-text-secondary flex items-center gap-1">
+                      <User size={10} className="text-neon-blue" /> Full Name <span className="text-neon-red">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rajesh Kumar"
+                      value={onboardName}
+                      onChange={(e) => setOnboardName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  {/* Patient Email */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase font-bold tracking-wider text-text-secondary flex items-center gap-1">
+                      <Mail size={10} className="text-neon-blue" /> Personal Email Address
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="e.g. rajesh@gmail.com"
+                      value={onboardEmail}
+                      onChange={(e) => setOnboardEmail(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs"
+                    />
+                  </div>
+
+                  {/* Primary Location */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase font-bold tracking-wider text-text-secondary flex items-center gap-1">
+                      <MapPin size={10} className="text-neon-blue" /> Patient Location / Coordinates
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. New Delhi, Delhi or coordinates"
+                        value={onboardLocation}
+                        onChange={(e) => setOnboardLocation(e.target.value)}
+                        className="flex-1 px-3.5 py-2.5 rounded-xl text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAutoDetectLocation}
+                        className="px-3 rounded-xl border border-neon-purple text-neon-purple hover:bg-neon-purple/5 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        Auto-GPS
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Emergency Phone */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase font-bold tracking-wider text-neon-red flex items-center gap-1 font-extrabold">
+                      <Phone size={10} /> Emergency Contact Phone <span className="text-neon-red">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. +91 99999 88888"
+                      value={onboardEmergencyNumber}
+                      onChange={(e) => setOnboardEmergencyNumber(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs border-neon-red/30 focus:border-neon-red!"
+                    />
+                  </div>
+
+                  {/* Emergency Email */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase font-bold tracking-wider text-neon-red flex items-center gap-1 font-extrabold">
+                      <Mail size={10} /> Emergency Contact Email <span className="text-neon-red">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. guardian@gmail.com"
+                      value={onboardEmergencyEmail}
+                      onChange={(e) => setOnboardEmergencyEmail(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-xs border-neon-red/30 focus:border-neon-red!"
+                    />
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={loading}
+                    type="submit"
+                    className="w-full py-3 rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-neon-blue shadow-[0_4px_12px_rgba(15,76,129,0.2)] mt-2"
+                  >
+                    {loading ? (
+                      <span>REGISTERING IDENTITY...</span>
+                    ) : (
+                      <>
+                        <span>COMPLETE PROFILE</span>
+                        <ArrowRight size={14} />
+                      </>
+                    )}
+                  </motion.button>
+                </motion.form>
+              ) : !isOtpSent ? (
+                // ─── STEP 1: INPUT PHONE NUMBER ─────────────────────
                 <motion.form
                   key="phone-input-step"
                   initial={{ opacity: 0, x: -10 }}
@@ -199,10 +401,10 @@ export default function Auth() {
                   exit={{ opacity: 0, x: 10 }}
                   transition={{ duration: 0.25 }}
                   onSubmit={handleSendOtp}
-                  className="space-y-5"
+                  className="space-y-5 text-left"
                 >
                   <p className="text-xs text-text-secondary leading-relaxed">
-                    Access your neural health network via secure one-time passcode verification. Enter your mobile number below.
+                    Verify identity using secure One-Time Passcode. Enter mobile phone details:
                   </p>
 
                   <div className="space-y-1.5">
@@ -212,13 +414,12 @@ export default function Auth() {
                       <input
                         type="tel"
                         required
-                        placeholder="e.g. +91 98765 43210"
+                        placeholder="e.g. 98765 43210 (without country code)"
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.03] border border-cyber-border/40 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-neon-blue/40 focus:bg-white/[0.05] transition-all font-medium"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs"
                       />
                     </div>
-                    <span className="text-[9px] text-text-muted">Include country code prefix (e.g. +91 for India).</span>
                   </div>
 
                   <motion.button
@@ -226,7 +427,7 @@ export default function Auth() {
                     whileTap={{ scale: 0.98 }}
                     disabled={loading}
                     type="submit"
-                    className="w-full py-3 rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-blue to-neon-purple shadow-[0_0_20px_rgba(0,240,255,0.15)]"
+                    className="w-full py-3 rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-neon-blue shadow-[0_4px_12px_rgba(15,76,129,0.2)]"
                   >
                     {loading ? (
                       <span>DISPATCHING OTP CODE...</span>
@@ -239,7 +440,7 @@ export default function Auth() {
                   </motion.button>
                 </motion.form>
               ) : (
-                // Step 2: Input Verification Code
+                // ─── STEP 2: INPUT VERIFICATION CODE ──────────────────
                 <motion.form
                   key="otp-verify-step"
                   initial={{ opacity: 0, x: 10 }}
@@ -247,21 +448,21 @@ export default function Auth() {
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.25 }}
                   onSubmit={handleVerifyOtp}
-                  className="space-y-5"
+                  className="space-y-5 text-left"
                 >
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => { setIsOtpSent(false); resetState(); }}
-                      className="text-[10px] text-neon-blue hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                      className="text-[10px] text-neon-blue hover:underline flex items-center gap-1 cursor-pointer font-bold"
                     >
                       <ArrowLeft size={12} /> Change number
                     </button>
-                    <span className="text-[10px] text-text-muted">OTP sent to: {phoneNumber}</span>
+                    <span className="text-[10px] text-text-secondary font-semibold">Sent to: {phoneNumber}</span>
                   </div>
 
                   <p className="text-xs text-text-secondary leading-relaxed">
-                    Please key in the 6-digit one-time passcode transmitted to your mobile number to authorize the login handshake.
+                    Please key in the 6-digit passcode transmitted to your mobile number.
                   </p>
 
                   <div className="space-y-1.5">
@@ -276,7 +477,7 @@ export default function Auth() {
                         placeholder="e.g. 123456"
                         value={otpCode}
                         onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/[0.03] border border-cyber-border/40 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-neon-purple/40 focus:bg-white/[0.05] transition-all tracking-[0.4em] font-black text-center"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl text-xs font-black tracking-[0.4em] text-center"
                       />
                     </div>
                   </div>
@@ -286,10 +487,10 @@ export default function Auth() {
                     whileTap={{ scale: 0.98 }}
                     disabled={loading}
                     type="submit"
-                    className="w-full py-3 rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-gradient-to-r from-neon-purple to-neon-blue shadow-[0_0_20px_rgba(168,85,247,0.15)]"
+                    className="w-full py-3 rounded-xl font-heading text-xs font-bold tracking-widest text-white flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all bg-neon-purple shadow-[0_4px_12px_rgba(20,184,166,0.2)]"
                   >
                     {loading ? (
-                      <span>VERIFYING CORE...</span>
+                      <span>VERIFYING CODE...</span>
                     ) : (
                       <>
                         <span>VERIFY & SIGN IN</span>
@@ -301,7 +502,7 @@ export default function Auth() {
                   <div className="flex items-center justify-between text-[11px] pt-1">
                     <span className="text-text-muted">Didn't receive passcode?</span>
                     {timer > 0 ? (
-                      <span className="text-text-muted">Resend in {timer}s</span>
+                      <span className="text-text-muted font-medium">Resend in {timer}s</span>
                     ) : (
                       <button
                         type="button"
@@ -316,27 +517,31 @@ export default function Auth() {
               )}
             </AnimatePresence>
 
-            <div className="relative flex items-center justify-center my-6">
-              <div className="absolute inset-0 w-full h-[1px] bg-cyber-border/30" />
-              <span className="relative z-10 px-3 bg-cyber-dark text-[9px] uppercase font-bold tracking-widest text-text-muted">OR GOOGLE BRIDGE</span>
-            </div>
+            {!isOnboarding && (
+              <>
+                <div className="relative flex items-center justify-center my-6">
+                  <div className="absolute inset-0 w-full h-[1px] bg-cyber-border" />
+                  <span className="relative z-10 px-3 bg-white text-[9px] uppercase font-extrabold tracking-widest text-text-muted">OR IDENTITY BRIDGE</span>
+                </div>
 
-            {/* Google Authentication Portal fallback */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-white/[0.02] border border-cyber-border/40 hover:bg-white/[0.05] hover:border-cyber-border/60 text-xs text-text-primary font-medium flex items-center justify-center gap-2 cursor-pointer transition-all"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" className="mr-1"><path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.5a5.99 5.99 0 0 1 5.99-6.013c1.49 0 2.854.55 3.907 1.455l3.057-3.057C19.102 3.1 16.697 2 13.99 2 8.163 2 3.5 6.663 3.5 12.5S8.163 23 13.99 23c5.383 0 9.877-3.85 9.877-9.5 0-.712-.083-1.4-.217-2.073l-11.41-.142z"/></svg>
-              <span>Sign in with Google Account</span>
-            </motion.button>
+                {/* Google Authentication Portal fallback */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full py-2.5 rounded-xl bg-white border border-cyber-border hover:bg-cyber-hover text-xs text-text-secondary font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" className="mr-1"><path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.5a5.99 5.99 0 0 1 5.99-6.013c1.49 0 2.854.55 3.907 1.455l3.057-3.057C19.102 3.1 16.697 2 13.99 2 8.163 2 3.5 6.663 3.5 12.5S8.163 23 13.99 23c5.383 0 9.877-3.85 9.877-9.5 0-.712-.083-1.4-.217-2.073l-11.41-.142z"/></svg>
+                  <span>Sign in with Google Account</span>
+                </motion.button>
+              </>
+            )}
           </GlowCard>
         </motion.div>
 
         {/* Footer validation and security tags */}
-        <div className="flex items-center justify-center gap-2 mt-8 text-[10px] text-text-muted">
+        <div className="flex items-center justify-center gap-2 mt-8 text-[10px] text-text-muted font-semibold">
           <Shield size={12} className="text-neon-blue" />
           <span>Biometric validation and secure SSL tunneling active</span>
         </div>
