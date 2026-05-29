@@ -1,6 +1,6 @@
 # MediVerse AI
 
-> **The Future of AI-Powered Healthcare** — A premium full-stack intelligent healthcare platform with neural diagnostics, real-time telemetry, secure satellite SOS emergency dispatch, and cyber-black glassmorphism user experiences.
+> **The Future of AI-Powered Healthcare** — A premium full-stack intelligent healthcare platform with neural diagnostics, real-time telemetry, secure satellite SOS emergency dispatch, dynamic location-based hospital locator, and a clean, high-performance user interface.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61DAFB)
@@ -11,56 +11,59 @@
 
 ---
 
-## 🎨 Premium Design Theme: Cyber-Black Glassmorphism
-The MediVerse frontend features a customized futuristic cyber-black design language engineered from the ground up:
-*   **Backdrop Glassmorphism**: Tailored `backdrop-blur-md` panels with harmonious borders using standard CSS variables and semi-transparent alphas.
-*   **Accent Meshes**: Glowing backdrop radial blurs in electric neon-blue (`#00D4FF`), neon-purple (`#8B5CF6`), and neon-red (`#EF4444`) to provide visual depth.
-*   **Advanced Typography**: Custom combination of futuristic fonts paired with standard browser fonts to balance readability and high-tech branding.
-*   **Micro-Animations**: Smooth hover-scaling, glowing focus borders, and concentric pulse animation rings.
+## 🎨 Clean & Modern Cyber-Professional UI
+The MediVerse frontend features a customized futuristic, high-contrast dashboard layout optimized for visual clarity:
+*   **Geometric Card Layouts**: Structured `12px` border-radius panels with harmonious subtle shadows to eliminate visual clutter and ensure modern visual aesthetics.
+*   **Vibrant Icon-Coded Sidebar**: A dynamic sidebar featuring a sleek gradient background (`from-slate-50 to-white`) with high-contrast, multi-colored service icons and a fluid active-state indicator pill.
+*   **Generous Visual Spacing**: Enhanced grid layouts (`gap-8`), card paddings, and page headers for seamless visual navigation and breathing room.
+*   **Time-Aware Dashboard Greeting**: An interactive welcome header that automatically synchronizes with the active time of day (Morning, Afternoon, Evening, Night) and pulls the active firebase user's name dynamically.
 
 ---
 
 ## 🔒 Stable Phone OTP Authentication Flow
-The security gateway has been refactored for production-ready reliability:
-1.  **Direct Firebase Auth integration**: Bypasses intermediate state wrappers to call `signInWithPhoneNumber` directly, ensuring thread-safe reCAPTCHA verification.
-2.  **Regional Policy Alignment**: Built-in logic supporting India (`+91`) and international mobile carrier routes.
-3.  **Invisible reCAPTCHA verifiers**: Safely bound to clean DOM anchor structures in `index.html` to eliminate excessive user puzzles.
-4.  **Clinical Bypass Sandbox**: Dedicated sandbox mode built into development routes to allow seamless validation testing without exhausting SMS carrier quotas.
+The security gateway is designed for friction-free verification:
+1.  **Simulated Sandbox Verification**: Clean local authentication fallback allowing seamless testing pathways without OTP cellular carrier delays.
+2.  **Regional Policy Alignment**: Direct carrier compatibility supporting international and Indian (+91) routing systems.
+3.  **No reCAPTCHA Frustration**: Stripped clean of intrusive reCAPTCHA prompts to ensure immediate patient access during high-stress check-ins.
 
 ---
 
 ## 🚨 SOS Critical Emergency Alert System
-The SOS Emergency Portal is designed for lightning-fast critical dispatch:
-*   **One-Tap Immediate Action**: Single click on the glowing, red mobile-friendly SOS button requests the user's high-accuracy GPS coordinates immediately.
-*   **Parameter Capture**: Automatically compiles full name, mobile number, email, emergency contact phone, emergency contact email, latitude, and longitude.
-*   **Webhook Cloud Sync**: Dispatches the structured JSON payload to the production API endpoint at `https://amitprakesh.app.n8n.cloud/webhook-test/emergency alert`.
-*   **Status Indicators**: 
-    *   *Loading Beacon Overlay*: A premium blurred lockscreen featuring a red spinning coordinate sync tracker.
-    *   *Transmission Banner*: Displays a green success banner ("Emergency Alert Sent Successfully") once n8n webhook returns a valid response.
-    *   *Error Resiliency*: Graceful fallbacks using standard coordinate arrays if the client rejects GPS permissions.
+The SOS Emergency Portal is built for lightning-fast critical dispatch:
+*   **One-Tap Immediate Action**: A large, easy-to-tap, mobile-friendly red SOS button that immediately captures the user's high-accuracy satellite GPS coordinates.
+*   **Dynamic Parameter Sync**: Compiles and sends a structured JSON payload consisting of full name, mobile number, email, emergency contact phone, emergency contact email, latitude, and longitude.
+*   **Automated Webhook Dispatch**: Transmits emergency telemetry payloads instantly to the cloud endpoint at `https://amitprakesh.app.n8n.cloud/webhook-test/emergency alert`.
+*   **Resilient GPS Auto-Detection**: Continuously listens for active GPS parameters on page load, fallback to standard coordinates if permissions are restricted.
+
+---
+
+## 📍 Nearby Hospital Locator
+A robust location-based search and routing map layout:
+*   **Universally Compatible Map Embed**: Replaced restricted/broken Google Maps JS keys with a zero-friction, standard Google Maps iframe compiler (`output=embed`). Requires zero private billing configurations and works flawlessly across all devices.
+*   **Automatic Live Coordinate Sync**: Listens for active GPS parameters on mount and prints active latitude and longitude in a status tracker.
+*   **Dynamic Marker Focus**: Selecting any medical facility on the list dynamically re-centers the map view on that hospital's offset coordinates and automatically labels the map marker with the selected hospital's name.
 
 ---
 
 ## 🚀 Live Deployments
 
 *   **Production Host**: [https://mediverse-c2d59.web.app](https://mediverse-c2d59.web.app)
-*   **Firebase Console**: [https://console.firebase.google.com/project/mediverse-c2d59/overview](https://console.firebase.google.com/project/mediverse-c2d59/overview)
+*   **Firebase Project Overview**: [https://console.firebase.google.com/project/mediverse-c2d59/overview](https://console.firebase.google.com/project/mediverse-c2d59/overview)
 
 ---
 
 ## 🛠️ Tech Stack
 
 ### Frontend
-*   **React 18** + **Vite** — High-speed compiler and optimization pipeline.
-*   **TailwindCSS** — Premium utility styling classes.
-*   **Framer Motion** — Dynamic state transitions.
-*   **Firebase SDK** — Direct Phone Authentication & Auth State listeners.
-*   **Lucide React** — Futuristic, sleek icon design sets.
+*   **React 18** + **Vite** — Optimized rendering engine.
+*   **TailwindCSS** — Utility CSS compiler.
+*   **Framer Motion** — Dynamic transitions.
+*   **Firebase SDK** — Phone authentication and profile listener modules.
+*   **Lucide React** — Premium icon library.
 
 ### Backend
-*   **FastAPI** — Asynchronous Python framework.
-*   **MongoDB + Motor** — Document-oriented database for storing user clinical telemetry.
-*   **JWT Security** — Local encrypted token generation.
+*   **FastAPI** — High-speed Python framework.
+*   **MongoDB + Motor** — Document-oriented data persistence.
 
 ---
 
@@ -91,4 +94,4 @@ Open [http://localhost:8000/docs](http://localhost:8000/docs)
 ---
 
 ## 📄 License
-Distributed under the MIT License. Built with ❤️ for the future of decentralized intelligent healthcare.
+Distributed under the MIT License. Built with ❤️ for decentralized intelligent healthcare.
