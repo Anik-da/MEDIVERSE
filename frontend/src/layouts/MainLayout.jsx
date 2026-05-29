@@ -17,7 +17,7 @@ export default function MainLayout() {
       {/* Main content */}
       <div
         className="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-        style={{ marginLeft: sidebarOpen ? '280px' : '76px' }}
+        style={{ marginLeft: sidebarOpen ? '300px' : '84px' }}
       >
         <Navbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 p-8 relative z-10 overflow-x-hidden">
